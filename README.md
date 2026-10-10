@@ -1,5 +1,7 @@
 # KeyPrint, Your Typing Has a Fingerprint
 
+[![Try KeyPrint live](https://img.shields.io/badge/%E2%96%B6%20Try%20KeyPrint%20live-7c3aed?style=for-the-badge&logo=github)](https://iamgokuld.github.io/keyprint/)
+
 **Your password is public. Your rhythm isn't.** KeyPrint learns how you type a passphrase and turns down anyone else who types the same one, even when they get every letter right.
 
 **Live site:** [https://iamgokuld.github.io/keyprint/](https://iamgokuld.github.io/keyprint/)
