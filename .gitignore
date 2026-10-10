@@ -1,0 +1,14 @@
+# CMU benchmark data: download with scripts/get-data.sh, do not commit
+DSL-StrongPasswordData.csv
+*.csv.part
+# local profiles and OS/editor files
+keyprint-profile*.json
+node_modules/
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# volunteer data from the Collect tab (keep out of the repo unless volunteers agreed to publication)
+data/collect/
+keyprint-collect-*.json

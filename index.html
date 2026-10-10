@@ -1,0 +1,1948 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="KeyPrint: keystroke-dynamics demo. Train the page on your typing rhythm; it rejects anyone else typing the same passphrase. Runs entirely in your browser.">
+<!--ARTIFACT-START-->
+<title>KeyPrint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: instrument panel — capture strip on top, live readouts left, profile/calibration rail right. */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --ink:#151a23; --muted:#5b6577; --line:#d9dee7;
+  --accent:#2a55c9; --accent-soft:#e3eafb;
+  --ok:#1d7a4c; --ok-soft:#dcf1e5; --bad:#b8322a; --bad-soft:#f8e0de; --warn:#a2650a;
+  --font-display:"Familjen Grotesk",ui-sans-serif,system-ui,sans-serif;
+  --font-body:"Familjen Grotesk",ui-sans-serif,system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f131a; --surface:#171c25; --ink:#e6eaf1; --muted:#9aa4b5; --line:#2a3240;
+  --accent:#7d9cff; --accent-soft:#1f2a47; --ok:#4cc68a; --ok-soft:#173527; --bad:#ff7a70; --bad-soft:#3d1d1b; --warn:#e8a94a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f131a; --surface:#171c25; --ink:#e6eaf1; --muted:#9aa4b5; --line:#2a3240;
+  --accent:#7d9cff; --accent-soft:#1f2a47; --ok:#4cc68a; --ok-soft:#173527; --bad:#ff7a70; --bad-soft:#3d1d1b; --warn:#e8a94a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px;display:grid;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:12px}
+h1{font-family:var(--font-display);font-size:28px;font-weight:700;letter-spacing:-.02em;margin:0}
+h1 small{font-family:var(--font-mono);font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.04em;margin-left:8px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0;font-weight:600}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;color:var(--ink);font:inherit;font-weight:600;padding:8px 18px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface)}
+.seg button:disabled{color:var(--muted);cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:20px;align-items:start}
+@media (max-width:880px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:14px;min-width:0}
+.col{display:grid;gap:20px;min-width:0}
+.capture{gap:16px}
+.keys{display:flex;flex-wrap:wrap;gap:6px}
+.key{font-family:var(--font-mono);font-weight:700;width:40px;height:44px;display:grid;place-items:center;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--muted);font-size:17px;transition:background .08s}
+.key.wide{width:56px}
+.key.done{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.key.down{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.key.err{background:var(--bad-soft);color:var(--bad);border-color:var(--bad)}
+#pass{font-family:var(--font-mono);font-size:20px;letter-spacing:.2em;width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.status{font-size:14px;color:var(--muted);min-height:1.5em}
+.status.bad{color:var(--bad)} .status.ok{color:var(--ok)}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.progress{display:flex;gap:6px;flex-wrap:wrap}
+.dot{width:22px;height:8px;border-radius:2px;background:var(--line)}
+.dot.on{background:var(--accent)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{font:inherit;font-size:14px;font-weight:600;padding:7px 12px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.btn.danger{color:var(--bad)} .btn.danger.armed{background:var(--bad);color:var(--surface);border-color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.verdicts{display:grid;gap:12px}
+.det{display:grid;grid-template-columns:150px minmax(0,1fr) 84px;gap:12px;align-items:center}
+@media (max-width:520px){.det{grid-template-columns:minmax(0,1fr) 84px}.det .bar{grid-column:1/-1;grid-row:2}}
+.det-name{font-weight:600;font-size:14px}
+.det-name span{display:block;font-family:var(--font-mono);font-size:11px;color:var(--muted);font-weight:400}
+.bar{position:relative;height:22px;background:var(--bg);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.bar .fill{position:absolute;inset:0 auto 0 0;background:var(--ok);opacity:.85;transition:width .25s}
+.bar.rej .fill{background:var(--bad)}
+.bar .thr{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink)}
+.bar .lbl{position:absolute;right:6px;top:1px;font-family:var(--font-mono);font-size:11px;color:var(--ink)}
+.pill{font-family:var(--font-mono);font-size:12px;font-weight:700;letter-spacing:.06em;text-align:center;padding:5px 0;border-radius:5px}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.idle{background:var(--bg);color:var(--muted)}
+.overall{font-family:var(--font-display);font-size:22px;font-weight:700}
+.overall.ok{color:var(--ok)} .overall.bad{color:var(--bad)} .overall.idle{color:var(--muted)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:600;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.scroll{overflow-x:auto;min-width:0}
+aside th,aside td{padding:4px 5px;font-size:12px}
+aside th{font-size:10.5px}
+.z-pos{color:var(--bad)} .z-neg{color:var(--accent)}
+svg text{fill:var(--muted);font-family:var(--font-mono);font-size:10px}
+.slider{display:grid;gap:4px}
+.slider input{width:100%;accent-color:var(--accent)}
+.samples{display:grid;gap:4px;max-height:240px;overflow:auto}
+.sample{display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:12px;padding:3px 6px;border-radius:4px;background:var(--bg)}
+.sample button{border:0;background:none;color:var(--muted);cursor:pointer;font:inherit}
+.sample button:hover{color:var(--bad)}
+textarea{width:100%;min-height:90px;font-family:var(--font-mono);font-size:11px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px}
+.chip{display:inline-block;font-family:var(--font-mono);font-size:11px;font-weight:700;padding:1px 5px;border-radius:3px}
+.chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.bad{background:var(--bad-soft);color:var(--bad)}
+.test-pass{color:var(--ok);font-weight:700} .test-fail{color:var(--bad);font-weight:700}
+.empty{color:var(--muted);font-size:14px;padding:8px 0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<style>
+:root{--c1:#2a55c9;--c2:#c2620e;--c3:#178a7a;--band:rgba(42,85,201,.08)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--c1:#7d9cff;--c2:#f0a050;--c3:#4fc7b4}}
+:root[data-theme="dark"]{--c1:#7d9cff;--c2:#f0a050;--c3:#4fc7b4}
+header .row{gap:12px}
+.tabs{display:inline-flex;gap:2px;border-bottom:1px solid var(--line)}
+.tabs button{border:0;border-bottom:2px solid transparent;background:none;color:var(--muted);font:inherit;font-weight:600;padding:8px 14px;cursor:pointer;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+#view-bench{display:grid;gap:20px}
+#view-bench[hidden]{display:none!important}
+.bgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:880px){.bgrid{grid-template-columns:minmax(0,1fr)}}
+.chart{position:relative;min-width:0}
+.chart canvas{display:block;width:100%}
+.seg.small button{padding:4px 10px;font-size:13px}
+.sel{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
+.badge{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:4px;background:var(--accent-soft);color:var(--accent)}
+.badge.live{background:var(--ok-soft);color:var(--ok)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px}
+.drop{display:grid;gap:4px;place-items:center;text-align:center;padding:22px 16px;border:1.5px dashed var(--line);border-radius:10px;background:var(--bg);cursor:pointer}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop.busy{opacity:.6;pointer-events:none}
+.pbar{height:6px;background:var(--bg);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.pbar div{height:100%;width:0;background:var(--accent);transition:width .15s}
+.tip{position:fixed;pointer-events:none;z-index:10;background:var(--ink);color:var(--surface);font-family:var(--font-mono);font-size:12px;padding:4px 8px;border-radius:4px;white-space:nowrap}
+td.good{color:var(--ok)} td.worse{color:var(--bad)}
+</style>
+<style>
+/* M4: tabs, guided steps, rhythm chart, How it works, accessibility */
+[hidden]{display:none!important}
+body{margin:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.brand{display:grid;gap:2px}
+.tagline{margin:0;color:var(--muted);font-size:15px;max-width:62ch;text-wrap:pretty}
+.tagline strong{color:var(--ink);font-weight:600}
+.privacy{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.privacy svg{flex:none}
+.tabs button:focus-visible{outline-offset:-2px}
+.view{display:grid;gap:20px;min-width:0}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.steps button{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:center;text-align:left;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);cursor:pointer}
+.steps button b{grid-row:1/3;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:13px;background:var(--bg);border:1px solid var(--line);color:var(--muted)}
+.steps button span{font-weight:600}
+.steps button small{font-size:12.5px;color:var(--muted)}
+.steps button[aria-current="step"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.steps button[aria-current="step"] b{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.steps button.done b{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.steps button:disabled{cursor:not-allowed;opacity:.55}
+@media (max-width:640px){.steps{grid-template-columns:minmax(0,1fr)}}
+.banner{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:8px;background:var(--accent-soft);color:var(--ink);border:1px solid var(--accent)}
+.banner p{margin:0;max-width:70ch}
+.viz2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+@media (max-width:880px){.viz2{grid-template-columns:minmax(0,1fr)}}
+.viz2 figure{margin:0;display:grid;gap:6px;min-width:0}
+.viz2 figcaption{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+.callout{border-left:3px solid var(--warn);padding:2px 0 2px 12px;display:grid;gap:6px}
+.callout p{margin:0;font-size:14px;max-width:70ch}
+.callout strong{color:var(--ink)}
+.counter{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.how{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:880px){.how{grid-template-columns:minmax(0,1fr)}}
+.how .panel p,.how .panel li{margin:0;max-width:68ch;text-wrap:pretty}
+.how .panel ul,.how .panel ol{margin:0;padding-left:20px;display:grid;gap:6px}
+.how h3{margin:0;font-family:var(--font-display);font-size:18px;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+.how .wide{grid-column:1/-1}
+.diagram{width:100%;max-width:560px;height:auto}
+.diagram text{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diagram .k{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.diagram .kl{fill:var(--accent);font-weight:700;font-size:13px}
+.diagram .m{stroke:var(--ink);stroke-width:1.25;fill:none}
+.diagram .ml{fill:var(--ink)}
+.diagram .ax{stroke:var(--line);stroke-width:1}
+footer{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+footer a,.how a{color:var(--accent)}
+.drop:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+<style>
+/* M5: responsive (360px → wide), touch keypad */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+.wrap{grid-template-columns:minmax(0,1fr);padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right));padding-bottom:max(48px,calc(env(safe-area-inset-bottom) + 24px))}
+header{align-items:flex-end}
+.panel{grid-template-columns:minmax(0,1fr)}
+.panel>*,.view>*,.col>*{min-width:0}
+.tabs{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{white-space:nowrap;flex:none}
+.chart canvas{touch-action:pan-y}
+button,a,label,summary,select,input{touch-action:manipulation}
+@media (max-width:520px){
+  h1{font-size:24px}
+  .panel{padding:14px}
+  .wrap{gap:16px;padding-top:16px}
+  .keys{display:grid;grid-template-columns:repeat(10,minmax(0,1fr)) minmax(0,1.5fr);gap:4px}
+  .keys .key,.keys .key.wide{width:auto;height:34px;font-size:14px}
+  #pass{font-size:17px;letter-spacing:.12em}
+  .det-name span{display:inline;margin-left:6px}
+}
+/* phones: compact step chips and tabs so the keypad sits higher on the page */
+@media (max-width:640px){
+  .steps{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .steps button{grid-template-columns:minmax(0,1fr);justify-items:start;gap:4px;padding:8px 10px;align-content:start;height:100%}
+  .steps button b{grid-row:auto;width:22px;height:22px;font-size:12px}
+  .steps button span{font-size:13.5px;line-height:1.25}
+  .steps button small{display:none}
+  .tabs button{padding:8px 10px}
+}
+@media (max-width:420px){.tab-long{display:none}}
+/* touch targets ≥ 44 px on touch screens and narrow windows */
+@media (pointer:coarse),(max-width:640px){
+  .btn,.tabs button,.seg button,.steps button,.sel,.sample button,#b-revert{min-height:44px}
+  .seg.small button{min-height:44px;padding:4px 14px}
+  .sample button{min-width:44px}
+  details>summary{min-height:44px;display:flex;align-items:center}
+  .slider input[type=range]{height:44px}
+  .footer-link,footer a{display:inline-flex;align-items:center;min-height:44px}
+}
+/* capture mode switch */
+.modebar{justify-content:space-between;gap:8px 12px}
+.switch{display:inline-flex;align-items:center;gap:10px;min-height:44px;cursor:pointer;font-weight:600;font-size:14px;user-select:none;-webkit-user-select:none}
+.switch input{appearance:none;-webkit-appearance:none;width:42px;height:26px;margin:0;border-radius:13px;background:var(--line);position:relative;cursor:pointer;flex:none;transition:background .15s}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.switch input:checked{background:var(--accent)}
+.switch input:checked::after{transform:translateX(16px)}
+.switch small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.badge.warn{background:var(--bad-soft);color:var(--bad)}
+.testing{border-color:var(--bad);background:var(--bad-soft)}
+/* on-screen keypad: no selection, no callout, no double-tap zoom, no scroll stealing the pointer */
+.keypad{display:grid;gap:8px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--bg);
+  touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;max-width:520px;width:100%;margin:0 auto}
+.keypad .kr{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.keypad .kr.ret{grid-template-columns:minmax(0,1fr)}
+/* keys use touch-action:none so a small finger slide never turns into a pan + pointercancel */
+.kp-key{position:relative;touch-action:none;min-height:56px;min-width:44px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);
+  font:700 22px var(--font-mono);display:grid;place-items:center;cursor:pointer;padding:0;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+  box-shadow:0 1px 0 var(--line);transition:background .06s,transform .06s}
+.kp-key.down{background:var(--accent);color:var(--surface);border-color:var(--accent);transform:translateY(1px)}
+.kp-key.ret{font-size:16px;letter-spacing:.06em}
+.kp-key .tap{position:absolute;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--bad);opacity:.85;pointer-events:none}
+@media (orientation:landscape) and (max-height:500px){.kp-key{min-height:44px;font-size:18px}.keypad{max-width:640px;gap:6px;padding:8px}.keypad .kr{gap:6px}}
+</style>
+<!--HEAD-END-->
+<!--ARTIFACT-HEAD-END-->
+</head>
+<body>
+<!--ARTIFACT-BODY-START-->
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>KeyPrint</h1>
+      <p class="tagline"><strong>Your password is public; your rhythm isn’t.</strong> Type <span class="mono">.tie5Roanl</span> ten times so the page learns how you type it, then let a friend try the same password and watch it get rejected.</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" id="tab-try" aria-selected="true" aria-controls="view-try" tabindex="0">Try it</button>
+      <button role="tab" id="tab-bench" aria-selected="false" aria-controls="view-bench" tabindex="-1">Benchmark</button>
+      <button role="tab" id="tab-how" aria-label="How it works" aria-selected="false" aria-controls="view-how" tabindex="-1">How<span class="tab-long"> it works</span></button>
+    </div>
+  </header>
+
+  <!-- ===================== TRY IT ===================== -->
+  <div id="view-try" class="view" role="tabpanel" aria-labelledby="tab-try" tabindex="-1">
+  <ol class="steps" aria-label="Demo steps">
+    <li><button id="step-enroll" aria-current="step"><b>1</b><span>Enroll</span><small id="step-enroll-sub">Type it 10 times · 0/10</small></button></li>
+    <li><button id="step-verify" disabled><b>2</b><span>Verify it’s you</span><small>Type it again as yourself</small></button></li>
+    <li><button id="step-friend" disabled><b>3</b><span>Hand to a friend</span><small>They type the same password</small></button></li>
+  </ol>
+
+  <section class="panel capture" aria-labelledby="cap-h">
+    <div class="row" style="justify-content:space-between">
+      <h2 id="cap-h">Step 1 · Enroll: type the passphrase, then Return</h2>
+      <span class="counter" id="rejects" title="Attempts discarded this session (typo, Backspace, focus lost, touch cancelled)">0 discarded</span>
+    </div>
+    <div class="row modebar">
+      <label class="switch"><input type="checkbox" id="force-keypad" role="switch" aria-describedby="mode-note"><span>On-screen keypad<small id="mode-sub">Uses your mobile profile</small></span></label>
+      <span class="badge" id="mode-badge">Desktop profile · keyboard</span>
+    </div>
+    <p class="banner testing" id="mode-note" hidden><span><strong>Testing mode:</strong> keypad forced on a device without a touch screen. Mouse clicks are not finger taps, so this only checks the plumbing; enroll on a phone for real numbers.</span></p>
+    <div class="banner" id="friend-banner" hidden>
+      <p><strong>Friend’s turn.</strong> Hand over the <span class="dev-word">keyboard</span>. They type <span class="mono">.tie5Roanl</span> then Return; the password is no secret, only your rhythm is. Every attempt counts as “Someone else”.</p>
+      <button class="btn" id="friend-done">Back to me</button>
+    </div>
+    <div class="keys" id="keys" aria-hidden="true"></div>
+    <label for="pass" class="sr-only">Passphrase (type .tie5Roanl then Return)</label>
+    <input id="pass" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="status" placeholder="click here and type .tie5Roanl">
+    <div class="keypad" id="keypad" role="group" aria-label="On-screen keypad for .tie5Roanl and Return" hidden></div>
+    <div class="status" id="status" aria-live="polite">Start with “.”. Backspace or a wrong key discards the attempt; Esc restarts.</div>
+    <div class="viz2">
+      <figure>
+        <figcaption>Key timeline · last attempt</figcaption>
+        <div class="scroll"><svg id="timeline" width="100%" height="150" role="img" aria-label="Key hold timeline for the last attempt"></svg></div>
+      </figure>
+      <figure>
+        <figcaption>Rhythm vs your profile · 31 features</figcaption>
+        <div class="scroll"><svg id="rhythm" width="100%" height="190" role="img" aria-label="Each timing feature of the last attempt against your profile mean plus or minus one standard deviation"></svg></div>
+        <p class="hint"><span class="swatch" style="background:var(--accent)"></span>this attempt · <span class="swatch" style="background:var(--muted);opacity:.35"></span>your mean ± 1 SD · <span class="swatch" style="background:var(--bad)"></span>beyond 2 SD. Grouped by key: hold, press→press, release→press.</p>
+      </figure>
+    </div>
+  </section>
+
+  <div class="grid">
+    <div class="col">
+      <section class="panel" id="enroll-panel" aria-labelledby="en-h">
+        <div class="row" style="justify-content:space-between"><h2 id="en-h">Enrollment</h2><span class="mono hint" id="en-count">0 / 10</span></div>
+        <div class="progress" id="progress" aria-hidden="true"></div>
+        <p class="hint" id="en-msg">Type the passphrase 10 times at your natural pace. Each clean attempt becomes a 31-feature sample. Training runs automatically after the 10th.</p>
+        <div class="callout">
+          <p><strong>Why 10 reps is a demo, not a lock.</strong> On the CMU benchmark, training on 10 reps gives about twice the error of 200 reps (mean EER 0.21–0.23 vs 0.10–0.11), and a 5% false-reject target set from only 10 scores lets through 8–17% false rejects. Expect the page to reject you now and then. <a href="#" data-goto="bench">See the curve</a>.</p>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="ver-h">
+        <div class="row" style="justify-content:space-between">
+          <h2 id="ver-h">Verdict</h2>
+          <span class="hint" id="who-label">Typing as: me</span>
+        </div>
+        <div class="overall idle" id="overall" aria-live="polite">Waiting for a trained profile</div>
+        <div class="verdicts" id="verdicts"></div>
+        <div>
+          <h2 style="margin-bottom:6px">Largest deviations from your profile</h2>
+          <div class="scroll" id="devs"><div class="empty">Shown after each verify attempt: features ranked by |x − mean| / mean absolute deviation.</div></div>
+        </div>
+        <div>
+          <h2 style="margin-bottom:6px">Me vs someone else</h2>
+          <div class="scroll" id="tally"><div class="empty">Step 2 attempts count as Me, step 3 attempts as Someone else. The tally shows false rejects and false accepts.</div></div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="col">
+      <section class="panel" aria-labelledby="pr-h">
+        <h2 id="pr-h">Profile</h2>
+        <div class="slider">
+          <label for="frr" class="row" style="justify-content:space-between"><span>Target false-reject rate</span><span class="mono" id="frr-val">5%</span></label>
+          <input id="frr" type="range" min="0" max="30" step="1" value="5" aria-describedby="frr-help">
+          <span class="hint" id="frr-help">Thresholds are leave-one-out score quantiles at 1 − FRR.</span>
+        </div>
+        <div class="scroll" id="thr-table"><div class="empty">No profile trained yet.</div></div>
+        <div class="samples" id="samples"></div>
+        <div class="row">
+          <button class="btn" id="export">Export JSON</button>
+          <button class="btn" id="copy">Copy JSON</button>
+          <button class="btn" id="import-btn">Import file</button>
+          <input id="import-file" type="file" accept="application/json,.json" hidden aria-label="Import profile or M1 export">
+          <button class="btn danger" id="reset">Reset</button>
+        </div>
+        <details>
+          <summary class="hint" style="cursor:pointer">Paste profile JSON (M2 profile or M1 export)</summary>
+          <label for="json-box" class="sr-only">Profile JSON</label>
+          <textarea id="json-box" spellcheck="false" placeholder='{"app":"KeyPrint", ...}'></textarea>
+          <div class="row"><button class="btn" id="import-text">Import pasted JSON</button><button class="btn" id="load-example">Load synthetic example</button></div>
+        </details>
+        <div class="status" id="pr-status" aria-live="polite"></div>
+        <p class="privacy"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 7V5a4 4 0 0 1 8 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="2.5" y="7" width="11" height="8" rx="1.5" fill="currentColor"/></svg>All data stays in this browser. Nothing is uploaded.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="st-h">
+        <div class="row" style="justify-content:space-between"><h2 id="st-h">Synthetic self-test</h2><button class="btn" id="run-test">Run again</button></div>
+        <p class="hint">10 genuine samples train each detector; 200 held-out genuine and 200 impostor attempts (mean shifted 1.5 SD per feature) are scored.</p>
+        <div class="scroll" id="test-out"></div>
+      </section>
+    </aside>
+  </div>
+  </div><!-- /view-try -->
+
+  <!-- ===================== BENCHMARK ===================== -->
+  <div id="view-bench" class="view" role="tabpanel" aria-labelledby="tab-bench" tabindex="-1" hidden>
+    <section class="panel" aria-labelledby="bs-h">
+      <div class="row" style="justify-content:space-between">
+        <h2 id="bs-h">Equal-error rate vs Killourhy &amp; Maxion (2009)</h2>
+        <span class="badge" id="b-source">precomputed</span>
+      </div>
+      <p class="hint" id="b-protocol"></p>
+      <div class="scroll" id="b-table"></div>
+      <p class="hint">Paper: K. S. Killourhy and R. A. Maxion, “Comparing Anomaly-Detection Algorithms for Keystroke Dynamics,” <i>DSN 2009</i>, pp. 125–134 (values as listed at <span class="mono">cs.cmu.edu/~keystroke</span>). KeyPrint’s Mahalanobis and nearest-neighbor use a shrunk covariance (λ ≥ 0.05), the paper’s use the plain sample covariance.</p>
+    </section>
+
+    <div class="bgrid">
+      <section class="panel" aria-labelledby="roc-h">
+        <div class="row" style="justify-content:space-between">
+          <h2 id="roc-h">ROC curves</h2>
+          <div class="row">
+            <label class="hint" for="b-subject">Subject</label>
+            <select id="b-subject" class="sel"></select>
+            <div class="seg small" role="group" aria-label="ROC zoom">
+              <button id="roc-full" aria-pressed="false">Full</button>
+              <button id="roc-zoom" aria-pressed="true">FAR ≤ 0.3</button>
+            </div>
+          </div>
+        </div>
+        <div class="legend" id="b-legend"></div>
+        <div class="chart"><canvas id="c-roc" height="340" role="img" aria-label="ROC curves: hit rate against false-alarm rate per detector"></canvas></div>
+        <p class="hint" id="roc-note">Mean over 51 subjects of the best hit rate at each false-alarm budget. The dashed diagonal is FAR = FRR; each curve crosses it near its EER.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="en-c-h">
+        <div class="row" style="justify-content:space-between">
+          <h2 id="en-c-h">Enrollment size</h2>
+          <div class="seg small" role="group" aria-label="Enrollment metric">
+            <button id="en-eer" aria-pressed="true">EER</button>
+            <button id="en-frr" aria-pressed="false">FRR at 5% target</button>
+          </div>
+        </div>
+        <div class="chart"><canvas id="c-enroll" height="340" role="img" aria-label="Mean EER against number of training repetitions"></canvas></div>
+        <p class="hint" id="en-note"></p>
+      </section>
+    </div>
+
+    <section class="panel" aria-labelledby="sp-h">
+      <div class="row" style="justify-content:space-between">
+        <h2 id="sp-h">Per-subject EER spread (200 training reps)</h2>
+        <span class="hint">Hover a dot for the subject; click to show its ROC.</span>
+      </div>
+      <div class="chart"><canvas id="c-spread" height="210" role="img" aria-label="Per-subject equal-error rates for each detector"></canvas></div>
+      <div class="scroll" id="b-enroll-table"></div>
+      <p class="hint">FRR / FAR @5%: threshold at the 95th percentile of out-of-sample training scores (leave-one-out up to 50 reps, as on the Try it tab; 10-fold above), applied to the held-out genuine and impostor reps.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="live-h">
+      <div class="row" style="justify-content:space-between">
+        <h2 id="live-h">Run live</h2>
+        <button class="btn" id="b-revert" hidden>Show precomputed results</button>
+      </div>
+      <div class="drop" id="b-drop" role="button" tabindex="0" aria-describedby="b-status">
+        <strong>Drop DSL-StrongPasswordData.csv here</strong> or click to choose it.
+        <span class="hint">Runs in a Web Worker in your browser; nothing is uploaded. About 30–90 s.</span>
+      </div>
+      <input type="file" id="b-file" accept=".csv,text/csv" hidden aria-label="CMU benchmark CSV">
+      <div class="pbar" aria-hidden="true"><div id="b-pfill"></div></div>
+      <div class="status" id="b-status" aria-live="polite">Get the CSV from cs.cmu.edu/~keystroke (51 subjects × 400 reps).</div>
+    </section>
+    <div class="tip" id="b-tip" hidden></div>
+  </div>
+
+  <!-- ===================== HOW IT WORKS ===================== -->
+  <div id="view-how" class="view how" role="tabpanel" aria-labelledby="tab-how" tabindex="-1" hidden>
+    <section class="panel wide" aria-labelledby="h-feat">
+      <h3 id="h-feat">1 · Every attempt becomes 31 timings</h3>
+      <p>The passphrase is the CMU benchmark’s <span class="mono">.tie5Roanl</span> plus Return: 11 keys. For each key KeyPrint records when it went down and up (browser event timestamps), then computes three kinds of interval, in the same column order as the CMU dataset:</p>
+      <svg class="diagram" viewBox="0 0 560 168" role="img" aria-labelledby="diag-t">
+        <title id="diag-t">Two keys, t then i, on a time axis. H.t is how long t is held; DD.t.i runs from t down to i down; UD.t.i runs from t up to i down.</title>
+        <path class="m" d="M60 24 V18 H230 V24"/><text class="ml" x="145" y="13" text-anchor="middle">H.t (hold)</text>
+        <rect class="k" x="60" y="30" width="170" height="26" rx="4"/><text class="kl" x="72" y="48">t</text>
+        <path class="m" d="M230 58 V68 H300 V72"/><text class="ml" x="308" y="66">UD.t.i (release → press)</text>
+        <rect class="k" x="300" y="76" width="150" height="26" rx="4"/><text class="kl" x="312" y="94">i</text>
+        <line class="m" x1="60" y1="58" x2="60" y2="110" stroke-dasharray="3 3"/>
+        <path class="m" d="M60 110 V116 H300 V104"/><text class="ml" x="180" y="131" text-anchor="middle">DD.t.i (press → press)</text>
+        <line class="ax" x1="20" y1="142" x2="540" y2="142"/>
+        <text x="540" y="160" text-anchor="end">time →</text>
+        <text x="20" y="160">UD = DD − H; negative when keys overlap</text>
+      </svg>
+      <p>11 hold times (H) + 10 press-to-press (DD) + 10 release-to-press (UD) = 31 features, in seconds. Keyup is matched by physical key, so letting go of Shift before R is fine. A typo, Backspace or leaving the field throws the attempt away; stray keys before “.” and Ctrl/Alt/Meta chords are ignored.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="h-det">
+      <h3 id="h-det">2 · Three detectors vote</h3>
+      <ul>
+        <li><strong>Scaled Manhattan.</strong> Sum over features of |x − mean| divided by the mean absolute deviation. Simple and the best performer in Killourhy &amp; Maxion’s comparison.</li>
+        <li><strong>Mahalanobis.</strong> Distance to the mean that accounts for features moving together (a slow typist is slow everywhere).</li>
+        <li><strong>Nearest neighbor.</strong> Mahalanobis distance to the closest single enrollment sample, which tolerates a profile with two styles.</li>
+      </ul>
+      <p>Each detector accepts if its score is under its own threshold. The overall verdict is a 2-of-3 majority.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="h-shr">
+      <h3 id="h-shr">3 · Shrinkage covariance</h3>
+      <p>With 10 samples and 31 features the sample covariance has rank 9 at most, so it cannot be inverted. KeyPrint shrinks the off-diagonal entries toward zero by a factor λ chosen from the data (Schäfer–Strimmer, clipped to at least 0.05), keeps the variances (floored at 1 ms SD), and inverts with a Cholesky factorization. On the full benchmark this also edges the paper’s plain-covariance Mahalanobis numbers.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="h-loo">
+      <h3 id="h-loo">4 · Thresholds from leave-one-out</h3>
+      <p>To pick a threshold without asking you to type even more, KeyPrint trains on 9 of your 10 samples and scores the 10th, ten times. The threshold is the (1 − target FRR) quantile of those 10 out-of-sample scores, linearly interpolated: the 95th percentile for the default 5% target. The slider moves it live.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="h-size">
+      <h3 id="h-size">5 · Why 10 reps gives about twice the error</h3>
+      <p>Mean EER on the CMU data with the same test set and only the training size changed:</p>
+      <div class="scroll" id="how-size"></div>
+      <p>A 95th percentile of 10 scores is noisy and biased low, and 10 reps typed in one sitting miss the drift between sessions. The false-reject rate only approaches its 5% target from about 100 reps.</p>
+    </section>
+
+    <section class="panel wide" aria-labelledby="h-mob">
+      <h3 id="h-mob">6 · On a phone: keypad taps, 31 + 22 features</h3>
+      <p>Soft keyboards report unreliable key timings (many send keydown and keyup together when the finger lifts, and autocorrect gets in the way), so on a touch screen KeyPrint shows its own keypad and never opens the system keyboard. Each key records <span class="mono">pointerdown</span> and <span class="mono">pointerup</span> with the event timestamp: hold = down → up, DD and UD exactly as on a keyboard, so the same 31 timing features. Overlapping taps (a second thumb landing before the first lifts) are allowed and give a negative UD, just like rolling keys on a keyboard.</p>
+      <p>On top of that, every tap records where it landed relative to the key centre, in key widths and heights (−0.5 … +0.5): an x and y offset for each of the 11 keys, 22 more features. The same three detectors run on the 53-number vector unchanged. Phone profiles are stored separately from keyboard profiles and are never scored against each other.</p>
+      <p>Whether tap position actually helps is an open question here: the CMU benchmark is keyboard-only. <span class="mono">bench-mobile.js</span> compares per-user EER with timing only against timing + position on 20-rep phone sessions, so far only on synthetic volunteers.</p>
+    </section>
+
+    <section class="panel wide" aria-labelledby="h-lim">
+      <h3 id="h-lim">7 · Limits and privacy</h3>
+      <ul>
+        <li>Rhythm drifts across days, keyboards and moods; a profile from one sitting will reject you more often later.</li>
+        <li>This is a demo of a research technique, not production authentication. Use it alongside a password, never instead of one.</li>
+        <li>Desktop and phone profiles are kept apart and never compared: a keyboard rhythm and a thumb rhythm are different signals.</li>
+        <li>All timings and profiles stay in your browser (localStorage). Export and import are files you control.</li>
+      </ul>
+    </section>
+  </div>
+
+  <footer>
+    <span class="privacy"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 7V5a4 4 0 0 1 8 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="2.5" y="7" width="11" height="8" rx="1.5" fill="currentColor"/></svg>Privacy: all data stays in your browser. Nothing is sent anywhere.</span>
+    <span>Benchmark data: CMU Keystroke Dynamics Benchmark (Killourhy &amp; Maxion, DSN 2009).</span>
+  </footer>
+</div>
+
+<script id="kp-detectors">
+// ==== KP-DETECTORS BEGIN ==== (pure functions; also loaded by test_detectors.js)
+var KP = (function () {
+  'use strict';
+  var PASSPHRASE = '.tie5Roanl';
+  var KEY_NAMES = ['period', 't', 'i', 'e', 'five', 'Shift.r', 'o', 'a', 'n', 'l', 'Return'];
+  var EXPECTED_KEYS = ['.', 't', 'i', 'e', '5', 'R', 'o', 'a', 'n', 'l', 'Enter'];
+  // CMU column order: H.k1, DD.k1.k2, UD.k1.k2, H.k2, ... H.Return  (11 H + 10 DD + 10 UD = 31)
+  var FEATURE_NAMES = [];
+  for (var i = 0; i < KEY_NAMES.length; i++) {
+    FEATURE_NAMES.push('H.' + KEY_NAMES[i]);
+    if (i < KEY_NAMES.length - 1) {
+      FEATURE_NAMES.push('DD.' + KEY_NAMES[i] + '.' + KEY_NAMES[i + 1]);
+      FEATURE_NAMES.push('UD.' + KEY_NAMES[i] + '.' + KEY_NAMES[i + 1]);
+    }
+  }
+  var DIM = FEATURE_NAMES.length;
+  var MAD_FLOOR = 1e-3;   // seconds; stops a near-constant feature from dominating
+  var VAR_FLOOR = 1e-6;   // seconds^2 (1 ms SD)
+
+  /** ks: [{down, up}] in seconds, one per expected key, in order. */
+  function featuresFromKeystrokes(ks) {
+    if (ks.length !== KEY_NAMES.length) throw new Error('need ' + KEY_NAMES.length + ' keystrokes');
+    var x = [];
+    for (var i = 0; i < ks.length; i++) {
+      x.push(ks[i].up - ks[i].down);
+      if (i < ks.length - 1) {
+        x.push(ks[i + 1].down - ks[i].down);
+        x.push(ks[i + 1].down - ks[i].up);
+      }
+    }
+    return x;
+  }
+
+  // ---- linear algebra ----
+  function mean(S) {
+    var d = S[0].length, m = new Array(d).fill(0);
+    S.forEach(function (x) { for (var j = 0; j < d; j++) m[j] += x[j]; });
+    return m.map(function (v) { return v / S.length; });
+  }
+  function sub(a, b) { return a.map(function (v, j) { return v - b[j]; }); }
+  function cholesky(A) {
+    var n = A.length, L = A.map(function () { return new Array(n).fill(0); });
+    for (var i = 0; i < n; i++) for (var j = 0; j <= i; j++) {
+      var s = A[i][j];
+      for (var k = 0; k < j; k++) s -= L[i][k] * L[j][k];
+      if (i === j) { if (!(s > 0)) return null; L[i][i] = Math.sqrt(s); }
+      else L[i][j] = s / L[j][j];
+    }
+    return L;
+  }
+  function spdInverse(A) {
+    var n = A.length, tr = 0;
+    for (var i = 0; i < n; i++) tr += A[i][i];
+    var L = cholesky(A), jitter = 1e-9 * tr / n, B = A;
+    while (!L) {
+      B = A.map(function (r, i) { return r.map(function (v, j) { return i === j ? v + jitter : v; }); });
+      L = cholesky(B); jitter *= 10;
+      if (jitter > tr) throw new Error('matrix not invertible');
+    }
+    var inv = A.map(function () { return new Array(n).fill(0); });
+    for (var c = 0; c < n; c++) {
+      var y = new Array(n).fill(0), x = new Array(n).fill(0);
+      for (var r = 0; r < n; r++) { var s = r === c ? 1 : 0; for (var k = 0; k < r; k++) s -= L[r][k] * y[k]; y[r] = s / L[r][r]; }
+      for (var r2 = n - 1; r2 >= 0; r2--) { var s2 = y[r2]; for (var k2 = r2 + 1; k2 < n; k2++) s2 -= L[k2][r2] * x[k2]; x[r2] = s2 / L[r2][r2]; }
+      for (var r3 = 0; r3 < n; r3++) inv[r3][c] = x[r3];
+    }
+    return inv;
+  }
+  function quad(M, v) {
+    var s = 0;
+    for (var i = 0; i < v.length; i++) { var r = 0; for (var j = 0; j < v.length; j++) r += M[i][j] * v[j]; s += v[i] * r; }
+    return s;
+  }
+
+  /**
+   * Sample covariance shrunk toward its own diagonal (Schäfer–Strimmer "target D"):
+   * Σ* = (1-λ)·C + λ·diag(C), λ = Σ_{i≠j} Var(c_ij) / Σ_{i≠j} c_ij², clipped to [0.05, 1].
+   * Off-diagonals shrink; variances are kept (floored). PD whenever λ > 0.
+   */
+  function shrunkCovariance(S) {
+    var n = S.length, d = S[0].length;
+    if (n < 2) throw new Error('need at least 2 samples');
+    var mu = mean(S), X = S.map(function (x) { return sub(x, mu); });
+    var C = [], i, j, k;
+    for (i = 0; i < d; i++) { C.push(new Array(d).fill(0)); }
+    for (i = 0; i < d; i++) for (j = i; j < d; j++) {
+      var s = 0; for (k = 0; k < n; k++) s += X[k][i] * X[k][j];
+      C[i][j] = C[j][i] = s / (n - 1);
+    }
+    var num = 0, den = 0;
+    for (i = 0; i < d; i++) for (j = i + 1; j < d; j++) {
+      var wbar = 0; for (k = 0; k < n; k++) wbar += X[k][i] * X[k][j]; wbar /= n;
+      var v = 0; for (k = 0; k < n; k++) { var w = X[k][i] * X[k][j] - wbar; v += w * w; }
+      num += v * n / Math.pow(n - 1, 3);
+      den += C[i][j] * C[i][j];
+    }
+    var lambda = den > 0 ? Math.min(1, Math.max(0.05, num / den)) : 1;
+    var cov = C.map(function (r, i) {
+      return r.map(function (c, j) { return i === j ? Math.max(c, VAR_FLOOR) : (1 - lambda) * c; });
+    });
+    return { mu: mu, cov: cov, lambda: lambda };
+  }
+
+  // ---- detectors: train(samples) -> model, score(model, x) -> anomaly score (higher = less like you) ----
+  var scaledManhattan = {
+    id: 'manhattan', name: 'Scaled Manhattan', unit: 'Σ|x−μ|/MAD',
+    train: function (S) {
+      var mu = mean(S);
+      var mad = mu.map(function (m, j) {
+        var a = 0; S.forEach(function (x) { a += Math.abs(x[j] - m); });
+        return Math.max(MAD_FLOOR, a / S.length);
+      });
+      return { type: 'manhattan', mu: mu, mad: mad };
+    },
+    score: function (m, x) {
+      var s = 0; for (var j = 0; j < x.length; j++) s += Math.abs(x[j] - m.mu[j]) / m.mad[j];
+      return s;
+    }
+  };
+  var mahalanobis = {
+    id: 'mahalanobis', name: 'Mahalanobis', unit: '√(dᵀΣ*⁻¹d)',
+    train: function (S) {
+      var c = shrunkCovariance(S);
+      return { type: 'mahalanobis', mu: c.mu, inv: spdInverse(c.cov), lambda: c.lambda };
+    },
+    score: function (m, x) { return Math.sqrt(Math.max(0, quad(m.inv, sub(x, m.mu)))); }
+  };
+  var nearestNeighbor = {
+    id: 'nn', name: 'Nearest neighbor', unit: 'min Mahalanobis',
+    train: function (S) {
+      var c = shrunkCovariance(S);
+      return { type: 'nn', samples: S.map(function (r) { return r.slice(); }), inv: spdInverse(c.cov), lambda: c.lambda };
+    },
+    score: function (m, x) {
+      var best = Infinity;
+      m.samples.forEach(function (s) { best = Math.min(best, quad(m.inv, sub(x, s))); });
+      return Math.sqrt(Math.max(0, best));
+    }
+  };
+  var DETECTORS = [scaledManhattan, mahalanobis, nearestNeighbor];
+
+  // ---- thresholds ----
+  function looScores(det, S) {
+    return S.map(function (x, i) {
+      return det.score(det.train(S.filter(function (_, k) { return k !== i; })), x);
+    });
+  }
+  function quantile(arr, p) {
+    var a = arr.slice().sort(function (x, y) { return x - y; });
+    var h = (a.length - 1) * Math.min(1, Math.max(0, p)), lo = Math.floor(h), hi = Math.ceil(h);
+    return a[lo] + (a[hi] - a[lo]) * (h - lo);
+  }
+  function thresholdAt(loo, frr) { return quantile(loo, 1 - frr); }
+  function trainAll(S) {
+    var out = {};
+    DETECTORS.forEach(function (d) { out[d.id] = { model: d.train(S), loo: looScores(d, S) }; });
+    return out;
+  }
+  function deviations(manhattanModel, x, k) {
+    return x.map(function (v, i) {
+      return { i: i, name: FEATURE_NAMES[i], value: v, mean: manhattanModel.mu[i], z: (v - manhattanModel.mu[i]) / manhattanModel.mad[i] };
+    }).sort(function (a, b) { return Math.abs(b.z) - Math.abs(a.z); }).slice(0, k || 5);
+  }
+
+  // ---- synthetic data ----
+  function rng(seed) {
+    return function () {
+      seed = (seed + 0x6D2B79F5) | 0;
+      var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function gaussian(r) {
+    return function () { var u = 0; while (u === 0) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); };
+  }
+  /** A typist = Gaussian over hold times (11) and press-to-press gaps (10); UD is derived, as on a real keyboard. */
+  function makeTypist(r) {
+    var hold = [], dd = [];
+    for (var i = 0; i < 11; i++) hold.push({ mu: 0.06 + 0.07 * r(), sd: 0 });
+    for (var j = 0; j < 10; j++) dd.push({ mu: 0.12 + 0.25 * r(), sd: 0 });
+    hold.concat(dd).forEach(function (p) { p.sd = 0.12 * p.mu; });
+    return { hold: hold, dd: dd };
+  }
+  function shiftTypist(t, r, shiftSd) {
+    function sh(p) { var sign = r() < 0.5 ? -1 : 1; return { mu: Math.max(0.03, p.mu + sign * shiftSd * p.sd), sd: p.sd }; }
+    return { hold: t.hold.map(sh), dd: t.dd.map(sh) };
+  }
+  function sampleTypist(t, g) {
+    var ks = [], down = 0;
+    for (var i = 0; i < 11; i++) {
+      if (i > 0) down += Math.max(0.02, t.dd[i - 1].mu + t.dd[i - 1].sd * g());
+      var h = Math.max(0.015, t.hold[i].mu + t.hold[i].sd * g());
+      ks.push({ down: down, up: down + h });
+    }
+    return featuresFromKeystrokes(ks);
+  }
+  function syntheticProfileSamples(seed, n) {
+    var r = rng(seed), g = gaussian(r), t = makeTypist(r), S = [];
+    for (var i = 0; i < n; i++) S.push(sampleTypist(t, g));
+    return S;
+  }
+  function runSyntheticTests(opts) {
+    opts = opts || {};
+    var seed = opts.seed || 7, nTrain = opts.nTrain || 10, nTest = opts.nTest || 200, shift = opts.shift || 1.5, frr = opts.frr == null ? 0.05 : opts.frr;
+    var r = rng(seed), g = gaussian(r);
+    var genuine = makeTypist(r), impostor = shiftTypist(genuine, r, shift);
+    var train = [], gen = [], imp = [], i;
+    for (i = 0; i < nTrain; i++) train.push(sampleTypist(genuine, g));
+    for (i = 0; i < nTest; i++) { gen.push(sampleTypist(genuine, g)); imp.push(sampleTypist(impostor, g)); }
+    var results = DETECTORS.map(function (d) {
+      var m = d.train(train), thr = thresholdAt(looScores(d, train), frr);
+      var gs = gen.map(function (x) { return d.score(m, x); }), is = imp.map(function (x) { return d.score(m, x); });
+      var avg = function (a) { return a.reduce(function (s, v) { return s + v; }, 0) / a.length; };
+      var meanGen = avg(gs), meanImp = avg(is);
+      return {
+        id: d.id, name: d.name, meanGen: meanGen, meanImp: meanImp, threshold: thr,
+        heldOutFRR: gs.filter(function (s) { return s > thr; }).length / gs.length,
+        impostorReject: is.filter(function (s) { return s > thr; }).length / is.length,
+        lambda: m.lambda, pass: meanImp > meanGen && isFinite(meanImp) && isFinite(meanGen)
+      };
+    });
+    return { seed: seed, results: results, allPass: results.every(function (x) { return x.pass; }) };
+  }
+
+  return {
+    PASSPHRASE: PASSPHRASE, KEY_NAMES: KEY_NAMES, EXPECTED_KEYS: EXPECTED_KEYS, FEATURE_NAMES: FEATURE_NAMES, DIM: DIM,
+    featuresFromKeystrokes: featuresFromKeystrokes, shrunkCovariance: shrunkCovariance, spdInverse: spdInverse,
+    scaledManhattan: scaledManhattan, mahalanobis: mahalanobis, nearestNeighbor: nearestNeighbor, DETECTORS: DETECTORS,
+    looScores: looScores, quantile: quantile, thresholdAt: thresholdAt, trainAll: trainAll, deviations: deviations,
+    rng: rng, gaussian: gaussian, syntheticProfileSamples: syntheticProfileSamples, runSyntheticTests: runSyntheticTests
+  };
+})();
+if (typeof module !== 'undefined') module.exports = KP;
+// ==== KP-DETECTORS END ====
+</script>
+
+<script id="kp-capture">
+// ==== KP-CAPTURE BEGIN ==== (pure: capture state machine, M1 import, rhythm stats; needs KP; also loaded by test_capture.js)
+var KPC = (function () {
+  'use strict';
+  // Keys that never count toward an attempt. Shift is folded into "R"; the rest are modifiers or focus keys.
+  var IGNORE = { Shift: 1, Control: 1, Alt: 1, AltGraph: 1, Meta: 1, OS: 1, Fn: 1, FnLock: 1, CapsLock: 1, NumLock: 1, Tab: 1 };
+
+  /**
+   * Capture state machine. Feed it keydown/keyup/blur events ({key, code, timeStamp, repeat, ctrlKey, altKey, metaKey}).
+   * Rules (M1 + M2 merged):
+   *  - clock = e.timeStamp (ms) / 1000, so handler delay is excluded;
+   *  - keys before "." are ignored ("stray"); Ctrl/Alt/Meta chords, AltGraph, Fn and auto-repeat are ignored;
+   *  - a wrong key, Backspace or blur spoils the attempt at once and increments the reject counter;
+   *  - once all keys are down, further keydowns are ignored while the last keys are released (M2 bug fix);
+   *  - keyup is matched by e.code, so releasing Shift before R is safe.
+   * Each call returns an action: {type: ignore|stray|start|key|restart|spoil|release|complete, ...}.
+   */
+  function createCapture(expected) {
+    expected = expected || KP.EXPECTED_KEYS;
+    var N = expected.length, a = null, rejects = 0;
+    function spoil(reason, pos, want, got) {
+      a = null; rejects++;
+      return { type: 'spoil', reason: reason, pos: pos == null ? null : pos, want: want, got: got, rejects: rejects };
+    }
+    function id(e) { return e.code || 'key:' + e.key; }
+    function keydown(e) {
+      if (e.key === 'Escape') { var had = !!a; a = null; return { type: had ? 'restart' : 'ignore' }; }
+      if (IGNORE[e.key] || e.ctrlKey || e.metaKey || e.altKey) return { type: 'ignore', passThrough: true };
+      if (e.repeat) return { type: 'ignore' };
+      if (!a) {
+        if (e.key !== expected[0]) return { type: 'stray', key: e.key };
+        a = { ks: [], pending: {} };
+      }
+      var pos = a.ks.length;
+      if (pos >= N) return { type: 'ignore' };
+      var want = expected[pos];
+      if (e.key !== want) return spoil(e.key === 'Backspace' ? 'backspace' : 'typo', pos, want, e.key);
+      a.ks.push({ down: e.timeStamp / 1000, up: null });
+      a.pending[id(e)] = pos;
+      return { type: pos === 0 ? 'start' : 'key', pos: pos, n: a.ks.length };
+    }
+    function keyup(e) {
+      if (!a || !(id(e) in a.pending)) return { type: 'ignore' };
+      var pos = a.pending[id(e)];
+      a.ks[pos].up = e.timeStamp / 1000; delete a.pending[id(e)];
+      if (a.ks.length === N && Object.keys(a.pending).length === 0) {
+        var ks = a.ks.map(function (k) { return { down: k.down, up: k.up }; });
+        a = null;
+        return { type: 'complete', ks: ks, x: KP.featuresFromKeystrokes(ks) };
+      }
+      return { type: 'release', pos: pos };
+    }
+    function blur() { return a && a.ks.length ? spoil('blur', null) : { type: 'ignore' }; }
+    return {
+      keydown: keydown, keyup: keyup, blur: blur,
+      cancel: function () { a = null; },
+      attempt: function () { return a ? a.ks.map(function (k) { return { down: k.down, up: k.up }; }) : null; },
+      rejects: function () { return rejects; }
+    };
+  }
+
+  /**
+   * M1 data -> M2 profile. Accepts an M1 export (schema 1: attempts[].vector, seconds) or M1 localStorage
+   * "keyprint.v1" (attempts[].H/DD/UD, milliseconds). Keeps the latest `keep`. Anything else is returned unchanged.
+   */
+  function fromM1(obj, keep, frr) {
+    if (!obj || !Array.isArray(obj.attempts) || Array.isArray(obj.samples)) return obj;
+    if (obj.featureNames && obj.featureNames.join() !== KP.FEATURE_NAMES.join()) throw new Error('M1 export has a different feature order');
+    var S = obj.attempts.map(function (a) {
+      if (Array.isArray(a.vector)) return a.vector;
+      if (!Array.isArray(a.H) || !Array.isArray(a.DD) || !Array.isArray(a.UD)) throw new Error('M1 attempt has no vector or H/DD/UD');
+      return a.H.flatMap(function (h, i) { return i < a.DD.length ? [h, a.DD[i], a.UD[i]] : [h]; }).map(function (v) { return v / 1000; });
+    });
+    return { app: 'KeyPrint', passphrase: obj.passphrase, samples: S.slice(-(keep || 10)), frr: frr == null ? 0.05 : frr, fromM1: S.length };
+  }
+
+  /** Per-feature mean and SD (n − 1) of enrollment samples, for the rhythm chart. */
+  function featureStats(S) {
+    if (!S.length) return null;
+    var d = S[0].length, mu = new Array(d).fill(0), sd = new Array(d).fill(0);
+    S.forEach(function (x) { for (var j = 0; j < d; j++) mu[j] += x[j] / S.length; });
+    if (S.length > 1) S.forEach(function (x) { for (var j = 0; j < d; j++) sd[j] += (x[j] - mu[j]) * (x[j] - mu[j]) / (S.length - 1); });
+    return { mean: mu, sd: sd.map(Math.sqrt), n: S.length };
+  }
+
+  return { IGNORE: IGNORE, createCapture: createCapture, fromM1: fromM1, featureStats: featureStats };
+})();
+if (typeof module !== 'undefined') module.exports = KPC;
+// ==== KP-CAPTURE END ====
+</script>
+
+<script id="kp-touch">
+// ==== KP-TOUCH BEGIN ==== (pure: keypad tap capture, 31 timing + 22 position features, synthetic volunteers; needs KP; also loaded by test_touch.js and bench-mobile.js)
+var KPT = (function () {
+  'use strict';
+  // On-screen keypad: only the keys of .tie5Roanl + Return, in rough QWERTY order, 5 per row so keys stay ≥ 44 px on a 360 px phone.
+  var KEYPAD_ROWS = [['5', 'e', 't', 'i', 'o'], ['a', 'n', 'l', 'R', '.'], ['Enter']];
+  var TIMING_DIM = KP.DIM;   // 31
+  var POS_NAMES = [];
+  KP.KEY_NAMES.forEach(function (k) { POS_NAMES.push('X.' + k, 'Y.' + k); });
+  var FEATURE_NAMES = KP.FEATURE_NAMES.concat(POS_NAMES);   // 31 timing (CMU order) + 22 position = 53
+  var DIM = FEATURE_NAMES.length;
+
+  /** Tap offset from the key centre, normalised to key size: −0.5 … +0.5 inside the key (x right, y down). */
+  function offset(clientX, clientY, rect) {
+    var r4 = function (v) { return Math.round(v * 1e4) / 1e4; };
+    return { dx: r4((clientX - (rect.left + rect.width / 2)) / rect.width), dy: r4((clientY - (rect.top + rect.height / 2)) / rect.height) };
+  }
+  /** ks: [{down, up, dx, dy}] (seconds) -> 53 numbers: KP's 31 timings, then X.k, Y.k per key. */
+  function features(ks) {
+    var x = KP.featuresFromKeystrokes(ks);
+    ks.forEach(function (k) { x.push(k.dx, k.dy); });
+    return x;
+  }
+  function timingOnly(x) { return x.slice(0, TIMING_DIM); }
+
+  /**
+   * Tap capture, same rules as the keyboard: clock = e.timeStamp; taps before "." are ignored; a wrong key spoils the
+   * attempt and counts a reject; taps after all 11 keys are down are ignored. Taps may overlap (multi-touch): each
+   * pointerup is matched to its pointerdown by pointerId. interrupt() (pointercancel, page hidden) spoils a started attempt.
+   * down({key, id, timeStamp, dx, dy}) / up({id, timeStamp}) return {type: ignore|stray|start|key|spoil|release|complete, ...}.
+   */
+  function createTapCapture(expected) {
+    expected = expected || KP.EXPECTED_KEYS;
+    var N = expected.length, a = null, rejects = 0;
+    function spoil(reason, pos, want, got) {
+      a = null; rejects++;
+      return { type: 'spoil', reason: reason, pos: pos == null ? null : pos, want: want, got: got, rejects: rejects };
+    }
+    function down(e) {
+      if (!a) {
+        if (e.key !== expected[0]) return { type: 'stray', key: e.key };
+        a = { ks: [], pending: {} };
+      }
+      var pos = a.ks.length;
+      if (pos >= N || e.id in a.pending) return { type: 'ignore' };
+      if (e.key !== expected[pos]) return spoil('typo', pos, expected[pos], e.key);
+      a.ks.push({ down: e.timeStamp / 1000, up: null, dx: e.dx, dy: e.dy });
+      a.pending[e.id] = pos;
+      return { type: pos === 0 ? 'start' : 'key', pos: pos, n: a.ks.length };
+    }
+    function up(e) {
+      if (!a || !(e.id in a.pending)) return { type: 'ignore' };
+      var pos = a.pending[e.id];
+      a.ks[pos].up = e.timeStamp / 1000; delete a.pending[e.id];
+      if (a.ks.length === N && Object.keys(a.pending).length === 0) {
+        var ks = a.ks.map(function (k) { return { down: k.down, up: k.up, dx: k.dx, dy: k.dy }; });
+        a = null;
+        return { type: 'complete', ks: ks, x: features(ks) };
+      }
+      return { type: 'release', pos: pos };
+    }
+    function interrupt(reason) { return a && a.ks.length ? spoil(reason || 'cancel', null) : { type: 'ignore' }; }
+    return {
+      down: down, up: up, interrupt: interrupt,
+      cancel: function () { a = null; },
+      attempt: function () { return a ? a.ks.map(function (k) { return { down: k.down, up: k.up, dx: k.dx, dy: k.dy }; }) : null; },
+      rejects: function () { return rejects; }
+    };
+  }
+
+  /**
+   * Synthetic phone volunteers for bench-mobile.js and the tests (NOT real data). Tuned so timing-only EER at 10 reps
+   * lands near the CMU keyboard figure (~0.2), so a gain from position is visible if it exists.
+   * Timing: population means (hold ~95 ms, press→press ~260 ms); each user scales them per key by exp(timeSignal·N(0,1));
+   * each rep has a shared tempo factor exp(0.08·N(0,1)) and 15% per-key noise.
+   * Position: population bias (taps land a little low); each user adds a personal bias of SD `posSignal` key widths per
+   * key and has tap noise SD 0.07–0.13. posSignal = 0 -> position carries no identity at all.
+   */
+  function syntheticVolunteers(opts) {
+    opts = opts || {};
+    var seed = opts.seed || 1, nUsers = opts.users || 20, nReps = opts.reps || 20;
+    var posSignal = opts.posSignal == null ? 0.06 : opts.posSignal, timeSignal = opts.timeSignal == null ? 0.12 : opts.timeSignal;
+    var r = KP.rng(seed), g = KP.gaussian(r), users = [];
+    for (var u = 0; u < nUsers; u++) {
+      var hold = [], dd = [], bias = [], noise = 0.07 + 0.06 * r(), k;
+      for (k = 0; k < 11; k++) hold.push(0.095 * Math.exp(timeSignal * g()));
+      for (k = 0; k < 10; k++) dd.push(0.26 * Math.exp(timeSignal * g()));
+      for (k = 0; k < 11; k++) bias.push([posSignal * g(), 0.08 + posSignal * g()]);
+      var reps = [];
+      for (var i = 0; i < nReps; i++) {
+        var ks = [], t = 0, tempo = Math.exp(0.08 * g());
+        for (k = 0; k < 11; k++) {
+          if (k) t += Math.max(0.03, dd[k - 1] * tempo * (1 + 0.15 * g()));
+          var h = Math.max(0.02, hold[k] * tempo * (1 + 0.15 * g()));
+          ks.push({ down: t, up: t + h, dx: bias[k][0] + noise * g(), dy: bias[k][1] + noise * g() });
+        }
+        reps.push(features(ks));
+      }
+      users.push({ participant: 'syn' + (u + 1), device: 'mobile', reps: reps });
+    }
+    return users;
+  }
+
+  return {
+    KEYPAD_ROWS: KEYPAD_ROWS, TIMING_DIM: TIMING_DIM, POS_NAMES: POS_NAMES, FEATURE_NAMES: FEATURE_NAMES, DIM: DIM,
+    offset: offset, features: features, timingOnly: timingOnly, createTapCapture: createTapCapture, syntheticVolunteers: syntheticVolunteers
+  };
+})();
+if (typeof module !== 'undefined') module.exports = KPT;
+// ==== KP-TOUCH END ====
+</script>
+
+<script>
+(function () {
+  'use strict';
+  var N_ENROLL = 10;
+  // Desktop and phone profiles live under separate keys and are never scored against each other.
+  var STORE = { desktop: 'keyprint.profile.v2', mobile: 'keyprint.profile.mobile.v1' }, KEYPAD_PREF = 'keyprint.keypad';
+  var $ = function (id) { return document.getElementById(id); };
+  var LABEL = { period: '.', five: '5', 'Shift.r': 'R', Return: '⏎' };
+  var lab = function (k) { return LABEL[k] || k; };
+  var keyName = function (k) { return k === 'Enter' ? 'Return' : k; };
+
+  var state = { device: 'desktop', step: 'enroll', samples: [], frr: 0.05, trained: null, history: [], lastX: null, lastKs: null };
+  var dim = function () { return state.device === 'mobile' ? KPT.DIM : KP.DIM; };
+  var names = function () { return state.device === 'mobile' ? KPT.FEATURE_NAMES : KP.FEATURE_NAMES; };
+  var who = function () { return state.step === 'friend' ? 'other' : 'me'; };
+
+  // ---------- device: keyboard vs on-screen keypad ----------
+  var coarse = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+  var touchSeen = false, keypadOn = false;
+  var isTouch = function () { return coarse || touchSeen; };
+
+  // ---------- capture controller ----------
+  /** o: {keys, input, keypad, status(msg, kind), rejects(n), onStart(), onComplete(r, device, pointer), blocked() -> message|null} */
+  function Capturer(o) {
+    var kcap = KPC.createCapture(), tcap = KPT.createTapCapture(), errPos = null, pressed = {}, ptypes = {};
+    KP.KEY_NAMES.forEach(function (k) {
+      var d = document.createElement('div'); d.className = 'key' + (k === 'Return' ? ' wide' : ''); d.textContent = lab(k); o.keys.appendChild(d);
+    });
+    var strip = o.keys.children, keyEls = {};
+    KPT.KEYPAD_ROWS.forEach(function (row) {
+      var r = document.createElement('div'); r.className = 'kr' + (row[0] === 'Enter' ? ' ret' : '');
+      row.forEach(function (k) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.tabIndex = -1; b.className = 'kp-key' + (k === 'Enter' ? ' ret' : ''); b.dataset.k = k;
+        b.setAttribute('aria-label', k === 'Enter' ? 'Return' : k === '.' ? 'period' : k === 'R' ? 'capital R' : k);
+        b.appendChild(document.createTextNode(k === 'Enter' ? 'Return ⏎' : k));
+        keyEls[k] = b; r.appendChild(b);
+      });
+      o.keypad.appendChild(r);
+    });
+    var total = function () { return kcap.rejects() + tcap.rejects(); };
+    var cur = function () { return keypadOn ? tcap : kcap; };
+    function paint() {
+      var ks = cur().attempt();
+      for (var i = 0; i < strip.length; i++) {
+        var cls = 'key' + (i === 10 ? ' wide' : '');
+        if (!ks && errPos === i) cls += ' err';
+        else if (ks && ks[i]) cls += ks[i].up == null ? ' down' : ' done';
+        strip[i].className = cls;
+      }
+    }
+    function clearTaps() { o.keypad.querySelectorAll('.tap').forEach(function (t) { t.remove(); }); }
+    function showTaps(ks) {   // dots where each tap of the last attempt landed
+      clearTaps();
+      ks.forEach(function (k, i) {
+        var b = keyEls[KP.EXPECTED_KEYS[i]], d = document.createElement('span');
+        d.className = 'tap'; d.style.left = (50 + k.dx * 100) + '%'; d.style.top = (50 + k.dy * 100) + '%'; b.appendChild(d);
+      });
+    }
+    function release() { Object.keys(pressed).forEach(function (id) { pressed[id].classList.remove('down'); }); pressed = {}; }
+    function onSpoil(r) {
+      errPos = r.pos; o.input.value = '';
+      var why = r.reason === 'backspace' ? 'Backspace used' : r.reason === 'blur' ? 'Focus left the field'
+        : r.reason === 'cancel' ? 'Touch cancelled (the finger slid off or the browser took over)' : r.reason === 'hidden' ? 'Page was hidden'
+        : 'Wrong key: expected “' + keyName(r.want) + '” at position ' + (r.pos + 1) + ', got “' + keyName(r.got) + '”';
+      o.rejects(total());
+      o.status(why + '. Attempt discarded (' + total() + ' this session); start again with “.”', 'bad');
+    }
+    function handle(r) {
+      if (r.type === 'restart') { errPos = null; o.input.value = ''; o.status('Restarted. Start with “.”'); }
+      else if (r.type === 'stray') o.status('Start with “.” (ignored “' + keyName(r.key) + '”).');
+      else if (r.type === 'start' || r.type === 'key') {
+        if (r.type === 'start') { errPos = null; clearTaps(); if (o.onStart) o.onStart(); }
+        if (!keypadOn) o.input.value = '•'.repeat(r.n);
+      }
+      else if (r.type === 'spoil') { release(); onSpoil(r); }
+      if (r.type === 'complete') {
+        o.input.value = ''; paint();
+        var pt = keypadOn ? Object.keys(ptypes).sort().join('+') || 'unknown' : 'keyboard'; ptypes = {};
+        if (keypadOn) showTaps(r.ks);
+        o.onComplete(r, keypadOn ? 'mobile' : 'desktop', pt);
+      } else paint();
+      if (r.type === 'spoil' || r.type === 'restart') ptypes = {};
+    }
+    // physical keyboard
+    o.input.addEventListener('keydown', function (e) { var r = kcap.keydown(e); if (!r.passThrough) e.preventDefault(); handle(r); });
+    o.input.addEventListener('keyup', function (e) { handle(kcap.keyup(e)); });
+    o.input.addEventListener('blur', function () { handle(kcap.blur()); });
+    o.input.addEventListener('paste', function (e) { e.preventDefault(); });
+    // a finger on the text field means a touch screen: switch to the keypad instead of opening the system keyboard
+    o.input.addEventListener('pointerdown', function (e) {
+      if (e.pointerType !== 'touch') return;
+      e.preventDefault(); touchSeen = true; setKeypad(true, 'auto');
+    });
+    // on-screen keypad: pointer events, e.timeStamp, overlapping taps matched by pointerId
+    o.keypad.addEventListener('pointerdown', function (e) {
+      var b = e.target.closest('[data-k]'); if (!b || !o.keypad.contains(b)) return;
+      e.preventDefault();   // no focus (so no system keyboard), no selection, no emulated mouse events
+      if (e.pointerType === 'touch' && !touchSeen) { touchSeen = true; paintMode(); }
+      var msg = o.blocked && o.blocked(); if (msg) { o.status(msg, 'bad'); return; }
+      try { b.setPointerCapture(e.pointerId); } catch (err) { /* synthetic events have no active pointer */ }
+      var off = KPT.offset(e.clientX, e.clientY, b.getBoundingClientRect());
+      var r = tcap.down({ key: b.dataset.k, id: e.pointerId, timeStamp: e.timeStamp, dx: off.dx, dy: off.dy });
+      if (r.type === 'start' || r.type === 'key') { pressed[e.pointerId] = b; b.classList.add('down'); ptypes[e.pointerType || 'unknown'] = 1; }
+      else if (r.type === 'stray' || r.type === 'ignore') { pressed[e.pointerId] = b; b.classList.add('down'); }
+      handle(r);
+    });
+    function lift(e) {
+      var b = pressed[e.pointerId]; if (!b) return;
+      delete pressed[e.pointerId]; b.classList.remove('down');
+      handle(e.type === 'pointerup' ? tcap.up({ id: e.pointerId, timeStamp: e.timeStamp }) : tcap.interrupt('cancel'));
+    }
+    o.keypad.addEventListener('pointerup', lift);
+    o.keypad.addEventListener('pointercancel', lift);
+    o.keypad.addEventListener('lostpointercapture', function (e) { if (pressed[e.pointerId]) lift({ type: 'pointercancel', pointerId: e.pointerId }); });
+    o.keypad.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    o.keypad.addEventListener('dblclick', function (e) { e.preventDefault(); });
+    document.addEventListener('visibilitychange', function () { if (document.hidden && keypadOn) { release(); handle(tcap.interrupt('hidden')); } });
+    function reset() { kcap.cancel(); tcap.cancel(); release(); errPos = null; ptypes = {}; o.input.value = ''; paint(); }
+    return {
+      reset: reset, paint: paint,
+      mode: function () { o.input.hidden = keypadOn; o.keypad.hidden = !keypadOn; clearTaps(); reset(); },
+      focus: function () { if (!keypadOn && !o.input.disabled) o.input.focus(); }
+    };
+  }
+
+  function setStatus(msg, kind) { var s = $('status'); s.textContent = msg; s.className = 'status' + (kind ? ' ' + kind : ''); }
+  var tryCap = Capturer({
+    keys: $('keys'), input: $('pass'), keypad: $('keypad'), status: setStatus,
+    rejects: function (n) { $('rejects').textContent = n + ' discarded'; },
+    onStart: function () { setStatus(state.step === 'friend' ? 'Recording your friend…' : 'Recording…'); },
+    onComplete: function (r, device) { finishAttempt(r, device); }
+  });
+
+  function finishAttempt(r, device) {
+    if (device !== state.device || r.x.length !== dim()) { setStatus('Capture mode changed mid-attempt; try again.', 'bad'); return; }
+    state.lastKs = r.ks; state.lastX = r.x; drawTimeline(r.ks);
+    if (state.step === 'enroll') onEnrollSample(r.x); else onVerify(r.x);
+    drawRhythm();
+  }
+
+  // ---------- timeline ----------
+  function drawTimeline(ks) {
+    var svg = $('timeline'), W = Math.max(svg.clientWidth || 520, 280), rowH = 15, top = 6, left = 30, right = 10;
+    var t0 = ks[0].down, t1 = Math.max.apply(null, ks.map(function (k) { return k.up; }));
+    var span = Math.max(t1 - t0, 0.001), sx = function (t) { return left + (t - t0) / span * (W - left - right); };
+    var h = top + ks.length * rowH + 18; svg.setAttribute('height', h); svg.setAttribute('viewBox', '0 0 ' + W + ' ' + h);
+    var out = '';
+    var step = span > 2 ? 0.5 : span > 0.8 ? 0.25 : 0.1;
+    if ((W - left - right) / (span / step) < 34) step *= 2;
+    for (var t = 0; t <= span + 1e-9; t += step) {
+      var X = sx(t0 + t);
+      out += '<line x1="' + X + '" x2="' + X + '" y1="' + top + '" y2="' + (h - 16) + '" stroke="var(--line)" stroke-width="1"/>';
+      out += '<text x="' + X + '" y="' + (h - 4) + '" text-anchor="middle">' + t.toFixed(2) + 's</text>';
+    }
+    ks.forEach(function (k, i) {
+      var y = top + i * rowH;
+      out += '<text x="' + (left - 6) + '" y="' + (y + 9) + '" text-anchor="end">' + lab(KP.KEY_NAMES[i]) + '</text>';
+      out += '<rect x="' + sx(k.down) + '" y="' + (y + 1) + '" width="' + Math.max(2, sx(k.up) - sx(k.down)) + '" height="' + (rowH - 3) + '" rx="2" fill="var(--accent)"/>';
+    });
+    svg.innerHTML = out;
+  }
+  function drawTimelineEmpty() {
+    var svg = $('timeline'); svg.setAttribute('height', 40); svg.removeAttribute('viewBox');
+    svg.innerHTML = '<text x="8" y="24">Your last attempt’s key holds appear here.</text>';
+  }
+
+  // ---------- rhythm chart (from M1): bars = last attempt, band = profile mean ± 1 SD; timing features only ----------
+  function drawRhythm() {
+    var svg = $('rhythm'), x = state.lastX && state.lastX.slice(0, KP.DIM);
+    if (!x) { svg.setAttribute('height', 40); svg.removeAttribute('viewBox'); svg.innerHTML = '<text x="8" y="24">Each timing of your last attempt, against your profile.</text>'; return; }
+    var st = state.samples.length >= 2 ? KPC.featureStats(state.samples.map(function (s) { return s.slice(0, KP.DIM); })) : null;
+    var W = Math.max(svg.clientWidth || 520, 280), H = 190, l = 46, r = 6, t = 8, b = 28;
+    var ms = function (v) { return v * 1000; };
+    var hi = 0, lo = 0;
+    x.forEach(function (v, j) {
+      hi = Math.max(hi, ms(v)); lo = Math.min(lo, ms(v));
+      if (st) { hi = Math.max(hi, ms(st.mean[j] + st.sd[j])); lo = Math.min(lo, ms(st.mean[j] - st.sd[j])); }
+    });
+    var stepMs = hi - lo > 600 ? 200 : hi - lo > 250 ? 100 : 50;
+    hi = Math.ceil(hi / stepMs) * stepMs; lo = Math.floor(lo / stepMs) * stepMs;
+    var Y = function (v) { return t + (hi - v) / (hi - lo) * (H - t - b); };
+    var n = x.length, cw = (W - l - r) / n, bw = Math.max(3, cw * 0.56), out = '';
+    for (var v = lo; v <= hi + 1e-9; v += stepMs) {
+      out += '<line x1="' + l + '" x2="' + (W - r) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="var(--line)" stroke-width="' + (v === 0 ? 1.5 : 1) + '"/>';
+      out += '<text x="' + (l - 5) + '" y="' + (Y(v) + 3) + '" text-anchor="end">' + v + (v === hi ? ' ms' : '') + '</text>';
+    }
+    x.forEach(function (val, j) {
+      var cx = l + cw * (j + 0.5), name = KP.FEATURE_NAMES[j], v = ms(val), far = false, tip = name + ': ' + v.toFixed(0) + ' ms';
+      if (st) {
+        var m = ms(st.mean[j]), s = ms(st.sd[j]);
+        far = s > 0 && Math.abs(v - m) > 2 * s;
+        tip += ' (profile ' + m.toFixed(0) + ' ± ' + s.toFixed(0) + ')';
+        out += '<rect x="' + (cx - cw * 0.45) + '" y="' + Y(m + s) + '" width="' + (cw * 0.9) + '" height="' + Math.max(1, Y(m - s) - Y(m + s)) + '" fill="var(--muted)" opacity=".3"/>';
+      }
+      var y0 = Y(0), y1 = Y(v);
+      out += '<rect x="' + (cx - bw / 2) + '" y="' + Math.min(y0, y1) + '" width="' + bw + '" height="' + Math.max(1, Math.abs(y1 - y0)) + '" fill="' + (far ? 'var(--bad)' : 'var(--accent)') + '"><title>' + tip + '</title></rect>';
+      if (st) out += '<line x1="' + (cx - cw * 0.45) + '" x2="' + (cx + cw * 0.45) + '" y1="' + Y(ms(st.mean[j])) + '" y2="' + Y(ms(st.mean[j])) + '" stroke="var(--ink)" stroke-width="1.5"/>';
+      if (name.indexOf('H.') === 0) {
+        out += '<text x="' + cx + '" y="' + (H - 12) + '" text-anchor="middle" style="font-size:11px;fill:var(--ink)">' + lab(name.slice(2)) + '</text>';
+        if (j) out += '<line x1="' + (cx - cw / 2) + '" x2="' + (cx - cw / 2) + '" y1="' + t + '" y2="' + (H - b + 4) + '" stroke="var(--line)" stroke-dasharray="2 3"/>';
+      }
+    });
+    out += '<text x="' + l + '" y="' + (H - 1) + '">' + (st ? 'band from ' + st.n + ' enrollment samples' : 'band appears after 2 enrollment samples') + '</text>';
+    svg.setAttribute('height', H); svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.innerHTML = out;
+  }
+
+  // ---------- enrollment & training ----------
+  function onEnrollSample(x) {
+    if (state.samples.length >= N_ENROLL) { setStatus('Enrollment is full. Go to step 2, or delete a sample to replace it.', 'bad'); return; }
+    state.samples.push(x);
+    setStatus('Sample ' + state.samples.length + ' of ' + N_ENROLL + ' recorded.', 'ok');
+    if (state.samples.length === N_ENROLL) {
+      train(); save(); setStep('verify');
+      setStatus('Profile trained on 10 samples. Step 2: type it again as yourself.', 'ok');
+    } else { state.trained = null; save(); }
+    render();
+  }
+  function train() { state.trained = state.samples.length >= 3 ? KP.trainAll(state.samples) : null; }
+  function thresholds() {
+    var t = {}; if (!state.trained) return t;
+    KP.DETECTORS.forEach(function (d) { t[d.id] = KP.thresholdAt(state.trained[d.id].loo, state.frr); });
+    return t;
+  }
+
+  // ---------- verify ----------
+  function onVerify(x) {
+    if (!state.trained) { setStatus('Train a profile first.', 'bad'); return; }
+    if (x.length !== state.samples[0].length) { setStatus('This attempt and the profile come from different devices; not compared.', 'bad'); return; }
+    var thr = thresholds(), res = {};
+    KP.DETECTORS.forEach(function (d) {
+      var s = d.score(state.trained[d.id].model, x);
+      res[d.id] = { score: s, thr: thr[d.id], accept: s <= thr[d.id] };
+    });
+    var accepts = KP.DETECTORS.filter(function (d) { return res[d.id].accept; }).length, ok = accepts >= 2;
+    state.history.unshift({ who: who(), res: res, x: x });
+    state.history = state.history.slice(0, 50);
+    renderVerdicts();
+    renderDevs(KP.deviations(state.trained.manhattan.model, x, 6).map(function (d) { d.name = names()[d.i]; return d; }));
+    renderTally();
+    if (who() === 'other') setStatus(ok ? 'Accepted: the page thinks your friend is you (a false accept).' : 'Rejected: your friend’s rhythm gave them away.', ok ? 'bad' : 'ok');
+    else setStatus(ok ? 'Accepted: ' + accepts + ' of 3 detectors say it is you.' : 'Rejected: only ' + accepts + ' of 3 detectors say it is you (a false reject).', ok ? 'ok' : 'bad');
+  }
+  function renderVerdicts() {
+    var ov = $('overall'), box = $('verdicts'), last = state.history[0], accepts = 0;
+    if (!state.trained) { ov.className = 'overall idle'; ov.textContent = 'Waiting for a trained profile'; box.innerHTML = idleDetectors(); return; }
+    if (!last) { ov.className = 'overall idle'; ov.textContent = 'Ready: type the passphrase to verify'; box.innerHTML = idleDetectors(); return; }
+    var thr = thresholds(), res = {};
+    KP.DETECTORS.forEach(function (d) { var s = last.res[d.id].score; res[d.id] = { score: s, thr: thr[d.id], accept: s <= thr[d.id] }; if (s <= thr[d.id]) accepts++; });
+    ov.className = 'overall ' + (accepts >= 2 ? 'ok' : 'bad');
+    ov.textContent = (accepts >= 2 ? 'ACCEPT' : 'REJECT') + ' · ' + accepts + '/3 detectors' + (last.who === 'other' ? ' · typed by someone else' : '');
+    box.innerHTML = KP.DETECTORS.map(function (d) {
+      var r = res[d.id], max = Math.max(r.thr * 2, r.score * 1.08);
+      return '<div class="det"><div class="det-name">' + d.name + '<span>' + d.unit + '</span></div>' +
+        '<div class="bar' + (r.accept ? '' : ' rej') + '" role="img" aria-label="' + d.name + ' score ' + r.score.toFixed(2) + ', threshold ' + r.thr.toFixed(2) + '">' +
+        '<div class="fill" style="width:' + (r.score / max * 100).toFixed(1) + '%"></div>' +
+        '<div class="thr" style="left:' + (r.thr / max * 100).toFixed(1) + '%"></div>' +
+        '<div class="lbl">' + r.score.toFixed(2) + ' / ' + r.thr.toFixed(2) + '</div></div>' +
+        '<div class="pill ' + (r.accept ? 'ok' : 'bad') + '">' + (r.accept ? 'ACCEPT' : 'REJECT') + '</div></div>';
+    }).join('');
+  }
+  function idleDetectors() {
+    return KP.DETECTORS.map(function (d) {
+      return '<div class="det"><div class="det-name">' + d.name + '<span>' + d.unit + '</span></div><div class="bar"></div><div class="pill idle">—</div></div>';
+    }).join('');
+  }
+  var isPos = function (name) { return /^[XY]\./.test(name); };
+  function describe(name) {
+    var t = name.split('.')[0], rest = name.slice(t.length + 1);
+    if (t === 'H') return 'hold ' + lab(rest);
+    if (t === 'X') return 'tap left/right on ' + lab(rest);
+    if (t === 'Y') return 'tap up/down on ' + lab(rest);
+    var a = KP.KEY_NAMES.filter(function (k) { return rest.indexOf(k + '.') === 0 && KP.KEY_NAMES.indexOf(rest.slice(k.length + 1)) >= 0; })[0];
+    var b = rest.slice(a.length + 1);
+    return (t === 'DD' ? 'press ' : 'release ') + lab(a) + ' → press ' + lab(b);
+  }
+  function fmt(name, v) { return isPos(name) ? (v >= 0 ? '+' : '') + (v * 100).toFixed(0) + '% key' : (v * 1000).toFixed(0) + ' ms'; }
+  function direction(name, z) {
+    if (name.indexOf('X.') === 0) return z > 0 ? 'further right' : 'further left';
+    if (name.indexOf('Y.') === 0) return z > 0 ? 'lower' : 'higher';
+    return z > 0 ? 'slower' : 'faster';
+  }
+  function renderDevs(list) {
+    $('devs').innerHTML = '<table><thead><tr><th>Feature</th><th>Meaning</th><th class="num">This attempt</th><th class="num">Profile mean</th><th class="num">Deviation</th></tr></thead><tbody>' +
+      list.map(function (d) {
+        return '<tr><td class="mono">' + d.name + '</td><td>' + describe(d.name) + '</td><td class="num">' + fmt(d.name, d.value) + '</td><td class="num">' +
+          fmt(d.name, d.mean) + '</td><td class="num ' + (d.z > 0 ? 'z-pos' : 'z-neg') + '">' + (d.z > 0 ? '+' : '') + d.z.toFixed(1) + '× MAD ' + direction(d.name, d.z) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+  function renderTally() {
+    if (!state.history.length) { $('tally').innerHTML = '<div class="empty">Step 2 attempts count as Me, step 3 attempts as Someone else. The tally shows false rejects and false accepts.</div>'; return; }
+    var thr = thresholds();
+    // re-evaluated against current thresholds so the FRR slider updates the tally too
+    var me = state.history.filter(function (h) { return h.who === 'me'; }), other = state.history.filter(function (h) { return h.who === 'other'; });
+    var acc = function (h, id) { return h.res[id].score <= thr[id]; };
+    var maj = function (h) { return KP.DETECTORS.filter(function (d) { return acc(h, d.id); }).length >= 2; };
+    var cell = function (k, n) { return n ? k + '/' + n + ' <span class="hint">(' + Math.round(k / n * 100) + '%)</span>' : '—'; };
+    var rows = KP.DETECTORS.map(function (d) {
+      return '<tr><td>' + d.name + '</td><td class="num">' + cell(me.filter(function (h) { return !acc(h, d.id); }).length, me.length) +
+        '</td><td class="num">' + cell(other.filter(function (h) { return acc(h, d.id); }).length, other.length) + '</td></tr>';
+    }).join('') + '<tr><td><strong>Majority (2 of 3)</strong></td><td class="num"><strong>' + cell(me.filter(function (h) { return !maj(h); }).length, me.length) +
+      '</strong></td><td class="num"><strong>' + cell(other.filter(maj).length, other.length) + '</strong></td></tr>';
+    var recent = state.history.slice(0, 8).map(function (h) {
+      return '<tr><td>' + (h.who === 'me' ? 'Me' : 'Someone else') + '</td>' + KP.DETECTORS.map(function (d) {
+        var a = acc(h, d.id);
+        return '<td><span class="chip ' + (a ? 'ok' : 'bad') + '">' + (a ? 'A' : 'R') + '</span></td>';
+      }).join('') + '</tr>';
+    }).join('');
+    $('tally').innerHTML = '<table><thead><tr><th>Detector</th><th class="num">False rejects · me (' + me.length + ')</th><th class="num">False accepts · others (' + other.length + ')</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<table style="margin-top:10px"><thead><tr><th>Recent</th><th>Manh.</th><th>Mahal.</th><th>NN</th></tr></thead><tbody>' + recent + '</tbody></table>';
+  }
+
+  // ---------- profile panel ----------
+  function renderProfile() {
+    $('frr').value = Math.round(state.frr * 100); $('frr-val').textContent = Math.round(state.frr * 100) + '%';
+    var n = state.samples.length;
+    $('en-count').textContent = n + ' / ' + N_ENROLL;
+    $('step-enroll-sub').textContent = n >= N_ENROLL ? 'Done · 10/10' : 'Type it 10 times · ' + n + '/' + N_ENROLL;
+    $('step-enroll').classList.toggle('done', n >= N_ENROLL);
+    $('progress').innerHTML = Array.from({ length: N_ENROLL }, function (_, i) { return '<span class="dot' + (i < n ? ' on' : '') + '"></span>'; }).join('');
+    $('en-msg').textContent = n >= N_ENROLL ? 'Enrollment complete. Delete a sample below to re-record it, or Reset to start over.'
+      : 'Type the passphrase ' + (N_ENROLL - n) + ' more time' + (N_ENROLL - n === 1 ? '' : 's') + ' at your natural pace. Each clean attempt becomes a ' + dim() + '-feature sample' + (state.device === 'mobile' ? ' (31 timings + 22 tap positions)' : '') + '. Training runs after the 10th.';
+    $('samples').innerHTML = state.samples.map(function (x, i) {
+      var total = x.slice(0, KP.DIM).reduce(function (s, v, j) { return KP.FEATURE_NAMES[j].indexOf('DD.') === 0 ? s + v : s; }, 0);
+      var loo = state.trained ? ' · LOO ' + state.trained.manhattan.loo[i].toFixed(1) : '';
+      return '<div class="sample"><span>#' + (i + 1) + ' · ' + total.toFixed(3) + ' s' + loo + '</span><button data-del="' + i + '" aria-label="Delete sample ' + (i + 1) + '">delete</button></div>';
+    }).join('');
+    if (!state.trained) { $('thr-table').innerHTML = '<div class="empty">' + (n ? 'Training needs ' + N_ENROLL + ' samples (' + n + ' so far).' : 'No ' + (state.device === 'mobile' ? 'phone' : 'keyboard') + ' profile trained yet.') + '</div>'; return; }
+    var thr = thresholds();
+    $('thr-table').innerHTML = '<table><thead><tr><th>Detector</th><th class="num">Threshold</th><th class="num">LOO max</th><th class="num">λ</th></tr></thead><tbody>' +
+      KP.DETECTORS.map(function (d) {
+        var t = state.trained[d.id], lam = t.model.lambda;
+        return '<tr><td>' + d.name + '</td><td class="num">' + thr[d.id].toFixed(2) + '</td><td class="num">' + Math.max.apply(null, t.loo).toFixed(2) + '</td><td class="num">' + (lam == null ? '—' : lam.toFixed(2)) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+  $('samples').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-del]'); if (!b) return;
+    state.samples.splice(+b.dataset.del, 1);
+    state.trained = null; state.history = [];
+    setStep('enroll'); save(); render(); drawRhythm();
+  });
+  $('frr').addEventListener('input', function (e) { state.frr = +e.target.value / 100; save(); render(); });
+
+  function profileJSON() {
+    var thr = thresholds();
+    return JSON.stringify({
+      app: 'KeyPrint', version: 3, device: state.device, passphrase: KP.PASSPHRASE, units: state.device === 'mobile' ? 'seconds; tap offsets in key widths/heights from centre' : 'seconds',
+      featureOrder: state.device === 'mobile' ? 'CMU timing (31) then X/Y tap offset per key (22)' : 'CMU',
+      features: names(), frr: state.frr, samples: state.samples,
+      thresholds: state.trained ? thr : null,
+      looScores: state.trained ? Object.fromEntries(KP.DETECTORS.map(function (d) { return [d.id, state.trained[d.id].loo]; })) : null,
+      exported: new Date().toISOString()
+    }, null, 1);
+  }
+  /** Profiles without a device field are desktop (M2–M4 exports, M1 data). A Collect file loads its first 10 reps. */
+  function loadProfile(obj) {
+    if (obj && obj.kind === 'keyprint-collect' && Array.isArray(obj.reps)) obj = { app: 'KeyPrint', device: obj.device, passphrase: obj.passphrase, samples: obj.reps.slice(0, N_ENROLL) };
+    obj = KPC.fromM1(obj, N_ENROLL, state.frr);
+    if (!obj || obj.app !== 'KeyPrint' || !Array.isArray(obj.samples)) throw new Error('Not a KeyPrint profile');
+    if (obj.passphrase && obj.passphrase !== KP.PASSPHRASE) throw new Error('Profile is for a different passphrase');
+    var dev = obj.device || 'desktop';
+    if (dev !== state.device) throw new Error('This is a ' + (dev === 'mobile' ? 'phone (keypad)' : 'keyboard') + ' profile; turn the on-screen keypad ' + (dev === 'mobile' ? 'on' : 'off') + ' first. Profiles are never compared across devices');
+    var ok = obj.samples.every(function (x) { return Array.isArray(x) && x.length === dim() && x.every(function (v) { return typeof v === 'number' && isFinite(v); }); });
+    if (!ok) throw new Error('Each sample must be ' + dim() + ' numbers');
+    state.samples = obj.samples.slice(0, N_ENROLL);
+    state.frr = typeof obj.frr === 'number' ? Math.min(0.3, Math.max(0, obj.frr)) : 0.05;
+    state.history = [];
+    if (state.samples.length === N_ENROLL) { train(); setStep('verify'); } else { state.trained = null; setStep('enroll'); }
+  }
+  function prStatus(msg, kind) { var s = $('pr-status'); s.textContent = msg; s.className = 'status' + (kind ? ' ' + kind : ''); }
+
+  /** Save a file through the host's downloads capability, a plain download outside the host, or fail (caller shows the JSON). */
+  async function saveFile(name, json) {
+    var dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
+    if (dl) { await dl.save({ filename: name, data: json }); return 'saved'; }
+    if (!window.claude) {
+      var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' })); a.download = name; a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000); return 'downloaded';
+    }
+    throw { code: 'unavailable' };
+  }
+  $('export').addEventListener('click', async function () {
+    var json = profileJSON();
+    try { var how = await saveFile(state.device === 'mobile' ? 'keyprint-profile-mobile.json' : 'keyprint-profile.json', json); prStatus('Profile ' + how + '.', 'ok'); }
+    catch (err) {
+      $('json-box').value = json; $('json-box').closest('details').open = true;
+      prStatus(err && err.code === 'declined' ? 'Save cancelled. The JSON is in the box below.' : 'Saving files is unavailable here. The JSON is in the box below; copy it.', 'bad');
+    }
+  });
+  function copyText(json, box, ok, fail) {
+    var p = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(json) : Promise.reject();
+    p.then(ok, function () { box.hidden = false; var d = box.closest('details'); if (d) d.open = true; box.value = json; box.select(); fail(); });
+  }
+  $('copy').addEventListener('click', function () {
+    var json = profileJSON(), box = $('json-box'); box.value = json;
+    copyText(json, box, function () { prStatus('Profile JSON copied.', 'ok'); }, function () { prStatus('Copy blocked. The JSON is selected in the box below.', 'bad'); });
+  });
+  function importText(text) {
+    try {
+      var obj = JSON.parse(text), n1 = obj && Array.isArray(obj.attempts) ? obj.attempts.length : 0;
+      loadProfile(obj); save(); render(); drawRhythm();
+      prStatus('Imported ' + state.samples.length + ' samples' + (n1 ? ' (latest of ' + n1 + ' M1 attempts)' : '') + (state.trained ? ' and retrained.' : '.'), 'ok');
+    }
+    catch (err) { prStatus('Import failed: ' + (err.message || err), 'bad'); }
+  }
+  $('import-btn').addEventListener('click', function () { $('import-file').click(); });
+  $('import-file').addEventListener('change', function (e) {
+    var f = e.target.files[0]; if (!f) return;
+    var r = new FileReader(); r.onload = function () { importText(r.result); }; r.readAsText(f); e.target.value = '';
+  });
+  $('import-text').addEventListener('click', function () { importText($('json-box').value); });
+  $('load-example').addEventListener('click', function () {
+    var seed = Date.now() % 100000;
+    var S = state.device === 'mobile' ? KPT.syntheticVolunteers({ seed: seed, users: 1, reps: N_ENROLL })[0].reps : KP.syntheticProfileSamples(seed, N_ENROLL);
+    loadProfile({ app: 'KeyPrint', device: state.device, samples: S, frr: state.frr });
+    save(); render(); drawRhythm(); prStatus('Loaded a synthetic ' + (state.device === 'mobile' ? 'phone ' : '') + 'typist. Your real typing will almost certainly be rejected by it.', 'ok');
+  });
+  var resetTimer = null;
+  $('reset').addEventListener('click', function () {
+    var b = $('reset');
+    if (!b.classList.contains('armed')) {
+      b.classList.add('armed'); b.textContent = 'Confirm reset';
+      resetTimer = setTimeout(function () { b.classList.remove('armed'); b.textContent = 'Reset'; }, 3000); return;
+    }
+    clearTimeout(resetTimer); b.classList.remove('armed'); b.textContent = 'Reset';
+    state.samples = []; state.trained = null; state.history = []; state.frr = 0.05; state.lastX = null; state.lastKs = null;
+    setStep('enroll'); save(); render(); drawTimelineEmpty(); drawRhythm(); prStatus('Profile cleared.', 'ok');
+  });
+
+  // ---------- guided steps: 1 Enroll → 2 Verify (me) → 3 Hand to a friend (someone else) ----------
+  var HEADINGS = {
+    enroll: 'Step 1 · Enroll: type the passphrase, then Return',
+    verify: 'Step 2 · Verify: type it again as yourself',
+    friend: 'Step 3 · Friend’s turn: they type the same passphrase'
+  };
+  function paintSteps() {
+    ['enroll', 'verify', 'friend'].forEach(function (k) {
+      var b = $('step-' + k);
+      if (k === state.step) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+      if (k !== 'enroll') b.disabled = !state.trained;
+    });
+    $('friend-banner').hidden = state.step !== 'friend';
+    $('cap-h').textContent = HEADINGS[state.step];
+    $('who-label').textContent = 'Typing as: ' + (who() === 'me' ? 'me' : 'someone else');
+  }
+  function setStep(s, focus) {
+    if (s !== 'enroll' && !state.trained) s = 'enroll';
+    var changed = s !== state.step;
+    state.step = s; tryCap.reset();
+    paintSteps();
+    if (changed && s === 'friend') setStatus('Hand the ' + (keypadOn ? 'phone' : 'keyboard') + ' to a friend. Their attempts count as Someone else.');
+    if (focus) tryCap.focus();
+  }
+  $('step-enroll').addEventListener('click', function () { setStep('enroll', true); });
+  $('step-verify').addEventListener('click', function () { setStep('verify', true); });
+  $('step-friend').addEventListener('click', function () { setStep('friend', true); });
+  $('friend-done').addEventListener('click', function () { setStep('verify', true); setStatus('Back to you. Attempts count as Me.'); });
+
+  // ---------- self-test ----------
+  function runTest() {
+    var seed = 1 + Math.floor(Math.random() * 1e6), out = KP.runSyntheticTests({ seed: seed });
+    $('test-out').innerHTML = '<table><thead><tr><th>Detector</th><th class="num">Genuine</th><th class="num">Impostor</th><th class="num">FRR</th><th class="num">Caught</th><th></th></tr></thead><tbody>' +
+      out.results.map(function (r) {
+        return '<tr><td>' + r.name + '</td><td class="num">' + r.meanGen.toFixed(2) + '</td><td class="num">' + r.meanImp.toFixed(2) + '</td><td class="num">' +
+          (r.heldOutFRR * 100).toFixed(0) + '%</td><td class="num">' + (r.impostorReject * 100).toFixed(0) + '%</td><td class="' + (r.pass ? 'test-pass' : 'test-fail') + '">' + (r.pass ? 'PASS' : 'FAIL') + '</td></tr>';
+      }).join('') + '</tbody></table><p class="hint mono">seed ' + seed + ' · mean scores; FRR on held-out genuine at the 5% LOO threshold</p>';
+  }
+  $('run-test').addEventListener('click', runTest);
+
+  // ---------- persistence (this browser only; one slot per device type) ----------
+  function save() { try { localStorage.setItem(STORE[state.device], JSON.stringify({ app: 'KeyPrint', device: state.device, samples: state.samples, frr: state.frr })); } catch (e) { } }
+  function restore() {
+    try {
+      var s = localStorage.getItem(STORE[state.device]);
+      if (s) { loadProfile(JSON.parse(s)); return; }
+      var v1 = state.device === 'desktop' && localStorage.getItem('keyprint.v1');   // M1 data on the same origin
+      if (v1) { loadProfile(JSON.parse(v1)); save(); }
+    } catch (e) { }
+  }
+  function useDevice(dev) {
+    if (dev === state.device) return;
+    save();
+    state = { device: dev, step: 'enroll', samples: [], frr: 0.05, trained: null, history: [], lastX: null, lastKs: null };
+    restore(); render(); drawTimelineEmpty(); drawRhythm(); renderDevsEmpty();
+  }
+  function renderDevsEmpty() { $('devs').innerHTML = '<div class="empty">Shown after each verify attempt: features ranked by |x − mean| / mean absolute deviation.</div>'; }
+
+  // ---------- keypad switch ----------
+  function paintMode() {
+    var testing = keypadOn && !isTouch();
+    $('force-keypad').checked = keypadOn;
+    $('mode-badge').textContent = keypadOn ? 'Phone profile · keypad' + (testing ? ' (forced)' : '') : 'Desktop profile · keyboard';
+    $('mode-badge').className = 'badge' + (testing ? ' warn' : '');
+    $('mode-sub').textContent = isTouch() ? 'Phone profile, separate from keyboard' : 'Force on to test the phone keypad here';
+    $('mode-note').hidden = !testing;
+    document.querySelectorAll('.dev-word').forEach(function (e) { e.textContent = keypadOn ? 'phone' : 'keyboard'; });
+  }
+  function setKeypad(on, why) {
+    if (why === 'user') { try { localStorage.setItem(KEYPAD_PREF, on ? '1' : '0'); } catch (e) { } }
+    var changed = on !== keypadOn;
+    keypadOn = on;
+    if (changed) {
+      useDevice(on ? 'mobile' : 'desktop');
+      if (document.activeElement && document.activeElement.blur && on && document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'password') document.activeElement.blur();
+    }
+    tryCap.mode(); paintMode();
+    setStatus(keypadOn ? 'Tap the keys below: “.” first, Return last. A wrong key discards the attempt.' : 'Start with “.”. Backspace or a wrong key discards the attempt; Esc restarts.');
+  }
+  $('force-keypad').addEventListener('change', function (e) { setKeypad(e.target.checked, 'user'); });
+
+  function render() { renderProfile(); renderVerdicts(); renderTally(); paintSteps(); }
+
+  // ---------- size-dependent SVG charts: redraw when their box width changes ----------
+  var pending = 0;
+  function redraw() { pending = 0; if ($('view-try').hidden) return; if (state.lastKs) drawTimeline(state.lastKs); drawRhythm(); }
+  document.addEventListener('kp:tab', function (e) { if (e.detail === 'try') redraw(); });
+  if (window.ResizeObserver) {
+    var widths = new WeakMap();
+    var ro = new ResizeObserver(function (entries) {
+      var changed = entries.some(function (en) { var w = Math.round(en.contentRect.width); if (widths.get(en.target) === w) return false; widths.set(en.target, w); return true; });
+      if (changed && !pending) pending = requestAnimationFrame(redraw);
+    });
+    [$('timeline').parentNode, $('rhythm').parentNode].forEach(function (el) { ro.observe(el); });
+  } else window.addEventListener('resize', function () { if (!pending) pending = requestAnimationFrame(redraw); });
+
+  // read-only hooks for the Playwright tests and the console
+  window.KeyPrint = {
+    lastVector: function () { return state.lastX && state.lastX.slice(); }, device: function () { return state.device; },
+    keypad: function () { return keypadOn; }, samples: function () { return state.samples.length; }, trained: function () { return !!state.trained; },
+    featureNames: function () { return names().slice(); }
+  };
+
+  var pref = null; try { pref = localStorage.getItem(KEYPAD_PREF); } catch (e) { }
+  keypadOn = pref == null ? coarse : pref === '1';
+  state.device = keypadOn ? 'mobile' : 'desktop';
+  restore(); render(); drawTimelineEmpty(); drawRhythm(); runTest();
+  tryCap.mode(); paintMode();
+  if (keypadOn) setStatus('Tap the keys below: “.” first, Return last. A wrong key discards the attempt.');
+})();
+</script>
+
+<script id="kp-bench">
+// ==== KP-BENCH BEGIN ==== (pure functions; needs KP; also loaded by bench.js and the Web Worker)
+var KPB = (function () {
+  'use strict';
+  // Killourhy & Maxion (2009), DSN, Table 2 / cs.cmu.edu/~keystroke: mean (SD) equal-error rate
+  var PAPER = {
+    manhattan: { name: 'Manhattan (scaled)', mean: 0.0962, sd: 0.0694 },
+    nn: { name: 'Nearest Neighbor (Mahalanobis)', mean: 0.0996, sd: 0.0642 },
+    mahalanobis: { name: 'Mahalanobis', mean: 0.1101, sd: 0.0645 }
+  };
+  var SIZES = [5, 10, 20, 50, 100, 200];
+  var N_TRAIN = 200, N_IMP = 5, FRR_TARGET = 0.05;
+  // FAR grid for stored ROC curves: dense where the action is
+  var FA_GRID = [];
+  (function () { var i; for (i = 0; i <= 50; i++) FA_GRID.push(i / 100); for (i = 11; i <= 20; i++) FA_GRID.push(i / 20); })();
+
+  /** CSV text -> [{id, reps:[[31 numbers]]}], reps ordered by session then rep. Validates column order. */
+  function parseCSV(text) {
+    var lines = text.split(/\r?\n/).filter(function (l) { return l.trim().length; });
+    var head = lines[0].split(',').map(function (s) { return s.trim(); });
+    if (head[0] !== 'subject' || head[1] !== 'sessionIndex' || head[2] !== 'rep') throw new Error('unexpected CSV header: ' + head.slice(0, 3).join(','));
+    var feats = head.slice(3);
+    if (feats.length !== KP.DIM || feats.some(function (f, i) { return f !== KP.FEATURE_NAMES[i]; }))
+      throw new Error('feature columns do not match KeyPrint order');
+    var by = {}, order = [];
+    for (var i = 1; i < lines.length; i++) {
+      var c = lines[i].split(','), id = c[0].trim();
+      if (!by[id]) { by[id] = []; order.push(id); }
+      var x = new Array(KP.DIM);
+      for (var j = 0; j < KP.DIM; j++) { x[j] = +c[3 + j]; if (!isFinite(x[j])) throw new Error('bad number on line ' + (i + 1)); }
+      by[id].push({ s: +c[1], r: +c[2], x: x });
+    }
+    return order.map(function (id) {
+      var reps = by[id].sort(function (a, b) { return a.s - b.s || a.r - b.r; }).map(function (o) { return o.x; });
+      return { id: id, reps: reps };
+    });
+  }
+
+  /** ROC points as the accept threshold sweeps up (accept iff score <= t). Starts at (FAR 0, FRR 1). */
+  function roc(gen, imp) {
+    var all = [], i;
+    for (i = 0; i < gen.length; i++) all.push([gen[i], 0]);
+    for (i = 0; i < imp.length; i++) all.push([imp[i], 1]);
+    all.sort(function (a, b) { return a[0] - b[0]; });
+    var far = [0], frr = [1], thr = [-Infinity], g = 0, m = 0;
+    for (i = 0; i < all.length; i++) {
+      if (all[i][1]) m++; else g++;
+      if (i === all.length - 1 || all[i + 1][0] !== all[i][0]) {   // ties step together
+        far.push(m / imp.length); frr.push(1 - g / gen.length); thr.push(all[i][0]);
+      }
+    }
+    return { far: far, frr: frr, thr: thr };
+  }
+  /** Equal-error rate: first crossing of FRR and FAR, linearly interpolated between ROC points. */
+  function eer(gen, imp) {
+    var r = roc(gen, imp);
+    for (var k = 1; k < r.far.length; k++) {
+      var d1 = r.frr[k] - r.far[k];
+      if (d1 <= 0) {
+        var d0 = r.frr[k - 1] - r.far[k - 1], t = d0 / (d0 - d1);
+        return { eer: r.far[k - 1] + t * (r.far[k] - r.far[k - 1]), thr: r.thr[k], roc: r };
+      }
+    }
+    return { eer: 1, thr: Infinity, roc: r };
+  }
+  /** Best (lowest) FRR achievable at each FAR budget in FA_GRID. */
+  function rocOnGrid(r) {
+    return FA_GRID.map(function (f) {
+      var best = 1;
+      for (var k = 0; k < r.far.length; k++) if (r.far[k] <= f + 1e-12 && r.frr[k] < best) best = r.frr[k];
+      return best;
+    });
+  }
+  /** Out-of-sample scores for the training set: leave-one-out (as M2 does) up to 50 reps, 10-fold above (LOO cost grows as n²). */
+  function oofScores(det, S) {
+    if (S.length <= 50) return KP.looScores(det, S);
+    var out = new Array(S.length), K = 10;
+    for (var f = 0; f < K; f++) {
+      var m = det.train(S.filter(function (_, i) { return i % K !== f; }));
+      for (var i = f; i < S.length; i += K) out[i] = det.score(m, S[i]);
+    }
+    return out;
+  }
+  function meanSd(a) {
+    var m = a.reduce(function (s, v) { return s + v; }, 0) / a.length;
+    var v = a.reduce(function (s, x) { return s + (x - m) * (x - m); }, 0) / Math.max(1, a.length - 1);
+    return { mean: m, sd: Math.sqrt(v) };
+  }
+
+  /**
+   * Stepwise run so a Worker (or a main-thread fallback) can report progress.
+   * One step = one subject at one training size, all three detectors.
+   */
+  function createRun(subjects, opts) {
+    opts = opts || {};
+    var sizes = opts.sizes || SIZES, nTrain = opts.nTrain || N_TRAIN, nImp = opts.nImp || N_IMP;
+    var dets = KP.DETECTORS, S = subjects.length, total = S * sizes.length, done = 0;
+    subjects.forEach(function (s) { if (s.reps.length < nTrain * 2) throw new Error(s.id + ' has only ' + s.reps.length + ' reps'); });
+    var cells = {};   // cells[det][sizeIdx][subj] = {eer, frr5, far5, grid?}
+    dets.forEach(function (d) { cells[d.id] = sizes.map(function () { return new Array(S); }); });
+    var tests = subjects.map(function (s, i) {
+      var imp = [];
+      subjects.forEach(function (o, j) { if (j !== i) imp = imp.concat(o.reps.slice(0, nImp)); });
+      return { gen: s.reps.slice(nTrain, nTrain * 2), imp: imp };
+    });
+    function step() {
+      if (done >= total) return false;
+      var si = Math.floor(done / sizes.length), zi = done % sizes.length, n = sizes[zi];
+      var train = subjects[si].reps.slice(0, n), t = tests[si];
+      dets.forEach(function (d) {
+        var m = d.train(train);
+        var gs = t.gen.map(function (x) { return d.score(m, x); }), is = t.imp.map(function (x) { return d.score(m, x); });
+        var e = eer(gs, is), thr = KP.thresholdAt(oofScores(d, train), FRR_TARGET);
+        var c = {
+          eer: e.eer,
+          frr5: gs.filter(function (v) { return v > thr; }).length / gs.length,
+          far5: is.filter(function (v) { return v <= thr; }).length / is.length
+        };
+        if (n === nTrain) c.grid = rocOnGrid(e.roc);
+        cells[d.id][zi][si] = c;
+      });
+      done++;
+      return true;
+    }
+    function result() {
+      var r3 = function (v) { return Math.round(v * 1e4) / 1e4; };
+      var zMain = sizes.indexOf(nTrain), out = {
+        meta: {
+          source: 'CMU Keystroke Dynamics Benchmark, DSL-StrongPasswordData.csv',
+          protocol: 'train first ' + nTrain + ' reps; test last ' + nTrain + ' genuine + first ' + nImp + ' reps of each other subject',
+          subjects: S, nTrain: nTrain, nGen: nTrain, nImp: nImp * (S - 1), frrTarget: FRR_TARGET, faGrid: FA_GRID
+        },
+        paper: PAPER, ids: subjects.map(function (s) { return s.id; }), sizes: sizes, det: {}
+      };
+      dets.forEach(function (d) {
+        var c = cells[d.id], o = { name: d.name, enroll: { mean: [], sd: [], frr5: [], far5: [] } };
+        sizes.forEach(function (n, zi) {
+          var ms = meanSd(c[zi].map(function (x) { return x.eer; }));
+          o.enroll.mean.push(r3(ms.mean)); o.enroll.sd.push(r3(ms.sd));
+          o.enroll.frr5.push(r3(meanSd(c[zi].map(function (x) { return x.frr5; })).mean));
+          o.enroll.far5.push(r3(meanSd(c[zi].map(function (x) { return x.far5; })).mean));
+        });
+        if (zMain >= 0) {
+          var main = c[zMain], ms = meanSd(main.map(function (x) { return x.eer; }));
+          o.mean = r3(ms.mean); o.sd = r3(ms.sd);
+          o.eer = main.map(function (x) { return r3(x.eer); });
+          // per-subject ROC on the grid, FRR in per-mille integers (compact)
+          o.roc = main.map(function (x) { return x.grid.map(function (v) { return Math.round(v * 1000); }); });
+          o.meanRoc = FA_GRID.map(function (_, k) { return Math.round(meanSd(main.map(function (x) { return x.grid[k]; })).mean * 1000); });
+        }
+        out.det[d.id] = o;
+      });
+      return out;
+    }
+    return { total: total, step: step, done: function () { return done; }, result: result };
+  }
+  function runAll(subjects, opts, onProgress) {
+    var run = createRun(subjects, opts);
+    while (run.step()) if (onProgress) onProgress(run.done(), run.total);
+    return run.result();
+  }
+
+  return { PAPER: PAPER, SIZES: SIZES, FA_GRID: FA_GRID, parseCSV: parseCSV, roc: roc, eer: eer, rocOnGrid: rocOnGrid, oofScores: oofScores, meanSd: meanSd, createRun: createRun, runAll: runAll };
+})();
+if (typeof module !== 'undefined') module.exports = KPB;
+// ==== KP-BENCH END ====
+</script>
+<script type="application/json" id="kp-bench-results">{"meta":{"source":"CMU Keystroke Dynamics Benchmark, DSL-StrongPasswordData.csv","protocol":"train first 200 reps; test last 200 genuine + first 5 reps of each other subject","subjects":51,"nTrain":200,"nGen":200,"nImp":250,"frrTarget":0.05,"faGrid":[0,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09,0.1,0.11,0.12,0.13,0.14,0.15,0.16,0.17,0.18,0.19,0.2,0.21,0.22,0.23,0.24,0.25,0.26,0.27,0.28,0.29,0.3,0.31,0.32,0.33,0.34,0.35,0.36,0.37,0.38,0.39,0.4,0.41,0.42,0.43,0.44,0.45,0.46,0.47,0.48,0.49,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,1],"generated":"2026-10-05","synthetic":false},"paper":{"manhattan":{"name":"Manhattan (scaled)","mean":0.0962,"sd":0.0694},"nn":{"name":"Nearest Neighbor (Mahalanobis)","mean":0.0996,"sd":0.0642},"mahalanobis":{"name":"Mahalanobis","mean":0.1101,"sd":0.0645}},"ids":["s002","s003","s004","s005","s007","s008","s010","s011","s012","s013","s015","s016","s017","s018","s019","s020","s021","s022","s024","s025","s026","s027","s028","s029","s030","s031","s032","s033","s034","s035","s036","s037","s038","s039","s040","s041","s042","s043","s044","s046","s047","s048","s049","s050","s051","s052","s053","s054","s055","s056","s057"],"sizes":[5,10,20,50,100,200],"det":{"manhattan":{"name":"Scaled Manhattan","enroll":{"mean":[0.2572,0.2297,0.1966,0.1545,0.1238,0.0962],"sd":[0.1411,0.139,0.1227,0.106,0.0841,0.0694],"frr5":[0.2311,0.1745,0.1916,0.1545,0.0656,0.0482],"far5":[0.488,0.4287,0.3435,0.2617,0.2736,0.2391]},"mean":0.0962,"sd":0.0694,"eer":[0.24,0.14,0.08,0.044,0.112,0.065,0.025,0.072,0.02,0.072,0.108,0.18,0.03,0.125,0.045,0.14,0.116,0.03,0.052,0.076,0.045,0.07,0.06,0.072,0.08,0.275,0.272,0.108,0.145,0.195,0.01,0.11,0.09,0.085,0.156,0.1,0.045,0.015,0.075,0.144,0.325,0.065,0.064,0.11,0.096,0.016,0.028,0.068,0.015,0.08,0.115],"roc":[[975,705,530,485,475,425,390,360,355,345,335,335,330,325,320,310,310,290,285,275,275,275,255,245,240,230,230,215,170,170,170,170,170,170,150,145,145,145,125,115,110,110,105,105,95,95,75,55,55,50,50,25,10,0,0,0,0,0,0,0,0],[970,835,555,460,455,445,380,360,310,295,265,235,215,190,140,140,115,105,90,85,80,80,70,70,55,45,40,30,25,25,20,20,20,15,15,15,10,10,10,10,10,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0],[885,545,475,335,195,145,100,100,80,70,60,55,55,50,50,50,45,45,35,35,30,30,30,30,30,25,25,25,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,5,5,5,0,0,0,0,0,0,0],[145,75,50,50,50,40,35,30,30,30,30,30,25,25,25,20,20,20,20,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0],[1000,910,730,455,405,290,285,250,200,140,125,115,105,90,85,75,75,65,65,60,35,30,20,20,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,0,0,0,0,0,0,0,0,0,0,0],[755,400,170,155,95,95,85,65,55,55,45,45,35,25,20,20,20,20,15,15,15,10,10,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[65,45,35,25,15,15,10,10,10,10,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[520,430,265,260,165,130,95,80,60,35,25,25,25,25,20,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[300,165,15,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[830,450,205,190,130,115,90,85,60,60,45,40,40,40,40,40,40,30,20,20,20,20,20,20,20,20,20,20,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[1000,995,850,790,690,555,380,345,225,195,140,105,95,75,75,70,70,65,55,40,35,35,30,30,25,25,20,20,20,20,15,15,10,10,10,10,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[830,640,590,520,500,480,460,450,430,415,345,335,325,290,240,230,205,205,170,160,140,125,115,110,105,95,85,85,70,70,55,50,45,45,45,45,45,45,45,45,45,40,40,40,30,30,30,30,30,30,30,25,20,20,15,10,10,0,0,0,0],[455,65,50,30,15,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[815,635,450,345,245,240,230,220,190,165,135,130,125,125,125,120,105,95,95,90,85,80,80,65,65,55,45,45,45,45,40,35,30,30,30,30,30,30,30,30,25,25,20,20,20,20,20,15,15,15,15,10,10,5,5,5,5,5,0,0,0],[90,60,55,55,50,45,45,45,40,40,25,25,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,0,0,0,0,0,0,0,0],[800,630,500,450,410,385,345,290,260,255,225,215,150,140,135,130,115,100,100,95,80,75,70,70,55,50,50,50,45,40,35,35,35,30,30,30,30,30,25,20,20,20,20,20,20,20,20,20,20,15,15,15,5,5,0,0,0,0,0,0,0],[870,540,330,310,225,215,190,145,125,125,125,125,110,110,110,100,100,95,95,90,80,65,55,55,50,50,35,35,30,30,25,20,20,15,15,15,15,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0],[45,30,30,30,30,30,30,25,25,25,20,20,20,20,20,20,20,20,20,20,20,20,15,15,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[240,170,120,95,85,60,20,20,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[645,270,150,125,100,90,80,80,75,75,75,75,75,70,65,65,55,55,55,55,50,50,50,50,50,50,45,45,45,40,40,35,35,35,35,35,35,30,30,30,25,25,25,25,25,25,25,25,25,25,25,15,5,5,0,0,0,0,0,0,0],[495,135,90,85,85,45,30,30,30,30,30,30,30,30,30,30,30,30,30,25,25,25,25,25,20,20,20,20,20,20,20,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,0,0,0,0,0,0],[390,290,120,105,85,85,70,70,70,60,50,50,45,40,40,40,40,40,40,40,40,35,35,35,35,30,30,30,30,30,30,30,20,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,0,0,0,0,0],[635,325,210,120,75,75,55,55,50,50,40,40,40,30,30,30,30,30,15,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[480,210,145,130,110,100,80,75,70,65,65,65,55,45,45,45,45,40,40,40,40,35,25,25,25,25,20,20,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0],[810,360,245,165,125,125,100,90,80,75,70,70,70,60,60,60,60,60,60,55,50,45,45,45,45,45,40,40,40,40,35,35,30,30,30,30,30,25,25,25,25,25,25,25,25,25,20,20,15,15,15,15,15,15,5,5,5,0,0,0,0],[895,800,720,700,675,655,610,595,570,555,530,520,500,490,470,455,450,450,450,430,390,380,365,350,315,305,305,280,265,255,230,195,180,175,175,170,155,145,130,115,100,100,100,90,75,75,75,70,70,65,65,40,25,15,0,0,0,0,0,0,0],[1000,950,910,885,850,815,805,780,685,645,610,590,535,510,485,470,455,450,420,415,375,370,360,330,325,310,290,280,250,245,235,230,200,200,190,180,160,160,130,130,125,105,105,100,85,80,70,70,60,55,45,20,15,5,0,0,0,0,0,0,0],[675,450,365,280,190,180,140,135,125,120,110,100,100,100,85,85,80,65,60,55,55,50,50,45,45,45,45,45,40,40,40,40,40,40,40,40,40,40,40,40,35,35,35,35,35,35,20,20,20,20,20,20,20,20,15,15,10,5,0,0,0],[1000,945,820,715,585,480,415,335,305,285,240,215,200,175,155,145,135,125,100,95,85,85,85,85,70,70,70,65,65,60,55,55,55,55,55,50,50,45,45,45,30,30,30,30,30,30,30,20,20,20,20,15,0,0,0,0,0,0,0,0,0],[775,675,485,455,400,365,350,340,340,340,300,280,275,260,240,235,215,210,200,195,185,180,180,150,130,125,115,115,115,90,75,75,60,50,50,35,35,30,30,30,30,25,25,25,25,25,25,25,20,20,15,5,5,5,0,0,0,0,0,0,0],[10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[860,565,455,415,295,245,225,170,155,125,120,110,100,90,90,90,90,90,85,80,75,75,70,65,60,60,55,55,55,55,50,50,50,50,40,35,15,15,15,15,15,15,15,15,15,15,10,10,10,10,5,0,0,0,0,0,0,0,0,0,0],[430,280,230,180,125,120,105,100,95,90,70,55,55,55,55,55,50,45,45,45,40,40,40,40,35,35,35,35,35,35,35,35,35,35,35,30,30,30,25,25,25,20,20,20,20,20,20,20,20,20,20,20,10,10,10,5,5,5,0,0,0],[180,125,125,105,105,95,85,85,85,85,85,85,85,85,85,85,85,85,85,80,80,80,80,80,75,75,70,65,60,60,60,60,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,50,30,20,10,0,0,0,0,0,0],[755,630,350,320,310,300,265,255,235,225,220,220,180,160,160,160,155,150,145,145,135,120,120,120,105,105,100,100,90,90,80,80,75,75,75,75,75,75,75,75,75,75,75,70,70,65,65,65,60,55,55,45,30,30,20,10,10,10,0,0,0],[435,210,180,170,160,150,140,120,110,105,100,100,95,95,85,85,80,80,80,75,70,70,70,70,60,60,55,55,55,50,45,45,45,40,40,35,30,30,30,15,15,15,15,15,15,15,15,15,10,10,10,10,5,5,5,5,5,5,5,0,0],[135,65,55,45,45,45,45,45,40,40,40,40,40,35,30,30,30,30,25,20,20,15,15,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0],[70,15,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0],[385,205,190,165,115,100,95,90,75,65,50,35,35,35,30,30,30,30,30,30,25,25,20,20,20,20,20,20,20,20,20,20,20,20,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,0,0,0,0,0,0,0,0],[790,560,475,400,350,345,310,290,250,230,210,160,160,155,145,130,125,125,110,105,95,95,95,95,95,90,85,80,65,65,55,55,55,45,40,40,35,25,20,20,20,20,20,20,20,20,20,20,10,10,10,5,5,0,0,0,0,0,0,0,0],[990,980,940,920,885,870,805,795,720,695,665,660,650,635,590,590,585,565,545,525,515,515,490,485,470,470,385,380,370,355,330,330,325,320,315,290,260,255,235,225,205,190,185,170,160,155,150,125,115,105,105,85,75,65,50,50,15,5,5,5,0],[605,480,300,160,90,80,70,65,45,45,35,35,35,30,30,25,25,25,20,15,15,15,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0],[825,635,330,135,105,80,65,55,45,45,40,35,35,35,35,35,35,30,30,30,30,30,25,25,25,25,25,25,25,25,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,15,15,15,15,15,15,15,15,10,5,0,0,0,0,0],[765,480,370,260,215,210,210,175,140,135,115,110,90,85,80,80,75,60,60,60,55,55,50,45,40,35,35,35,35,35,35,30,30,30,25,25,20,20,15,15,15,10,10,10,10,10,10,10,10,10,5,0,0,0,0,0,0,0,0,0,0],[935,835,655,575,395,355,300,285,230,125,70,65,50,50,50,50,35,25,20,20,20,20,20,20,15,15,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[25,20,15,15,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[40,40,35,25,20,20,20,20,15,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[890,655,295,250,95,80,70,65,55,55,50,50,45,45,45,45,45,40,35,35,30,30,30,25,20,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[145,15,15,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[985,785,705,455,265,225,115,105,80,65,65,65,60,50,50,40,40,40,40,35,30,30,30,30,30,30,30,30,25,15,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0],[995,765,615,455,400,345,310,240,220,130,120,115,100,80,80,55,45,35,35,25,10,10,10,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],"meanRoc":[601,433,326,272,226,204,180,166,147,135,121,115,107,100,94,91,87,83,78,74,69,66,63,60,56,54,49,48,44,42,39,37,35,34,33,31,29,28,26,24,23,21,21,20,19,19,17,16,15,14,13,10,7,5,3,2,1,1,0,0,0]},"mahalanobis":{"name":"Mahalanobis","enroll":{"mean":[0.2293,0.2089,0.1836,0.1615,0.1303,0.108],"sd":[0.1249,0.1234,0.108,0.0996,0.0773,0.0643],"frr5":[0.0954,0.0811,0.1124,0.0929,0.0518,0.045],"far5":[0.6335,0.5733,0.4489,0.3535,0.3453,0.323]},"mean":0.108,"sd":0.0643,"eer":[0.265,0.216,0.095,0.07,0.092,0.08,0.052,0.096,0.068,0.104,0.124,0.14,0.032,0.15,0.065,0.14,0.135,0.035,0.036,0.11,0.055,0.08,0.044,0.084,0.14,0.236,0.285,0.116,0.185,0.148,0.01,0.108,0.105,0.085,0.2,0.12,0.07,0.025,0.076,0.145,0.268,0.08,0.085,0.125,0.12,0.03,0.036,0.076,0.03,0.124,0.11],"roc":[[660,520,425,415,375,355,335,330,325,320,315,315,315,300,295,295,295,285,280,275,275,275,275,275,265,265,265,265,265,265,255,255,255,250,250,245,230,225,210,210,205,195,195,185,185,185,185,185,185,180,155,110,60,25,10,5,0,0,0,0,0],[850,650,615,590,535,530,510,495,490,480,475,450,420,360,310,310,280,265,250,245,225,220,210,180,170,165,145,140,120,110,105,105,90,90,80,45,45,40,40,35,20,20,20,20,20,20,20,20,20,20,20,15,15,15,10,10,5,0,0,0,0],[470,230,135,125,120,115,115,115,105,95,80,80,75,70,60,60,55,55,55,45,45,45,40,40,40,40,35,35,35,35,30,30,30,30,30,25,25,25,25,25,25,20,15,15,15,10,10,10,10,10,10,10,10,5,5,5,0,0,0,0,0],[135,115,80,70,70,70,70,70,60,55,55,55,55,55,55,50,50,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,30,30,30,30,30,30,25,25,25,25,25,25,25,10,5,5,5,5,5,5,5,0,0],[740,405,335,300,240,195,155,135,115,105,70,60,60,60,50,40,40,30,30,30,30,30,30,30,30,30,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,20,20,15,15,15,10,10,10,10,10,10,5,5,0,0,0,0,0,0],[450,220,150,115,105,100,100,95,65,60,55,55,50,40,35,35,30,30,20,20,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0],[285,145,65,60,55,55,45,40,30,15,15,15,15,15,15,15,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0],[320,215,195,195,155,155,135,125,115,115,90,90,85,85,85,80,70,65,65,65,55,55,50,50,50,40,35,30,30,30,30,30,25,25,20,20,20,20,15,15,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0],[505,370,165,145,100,80,80,60,60,60,55,50,40,40,35,35,30,30,30,25,25,20,15,15,15,15,15,15,10,10,10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[770,400,200,185,175,150,150,150,125,120,105,95,90,90,75,75,65,55,55,50,50,45,45,45,40,40,40,40,40,30,30,30,30,30,30,30,30,25,25,25,20,20,20,20,20,20,20,20,20,15,15,15,15,5,0,0,0,0,0,0,0],[915,705,575,480,375,360,275,260,245,240,165,150,125,115,110,110,105,90,80,75,75,65,65,65,60,55,50,45,45,45,45,40,35,35,25,25,20,20,20,15,15,10,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[820,625,530,365,330,310,245,235,205,180,165,160,150,150,135,135,130,130,130,125,120,100,95,95,95,95,95,95,95,95,95,95,85,80,80,80,80,80,80,70,65,65,65,65,65,65,65,65,65,60,60,60,50,50,35,30,15,5,5,0,0],[140,100,50,50,20,20,20,20,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0],[625,555,495,480,325,275,260,240,240,225,185,170,160,155,150,150,140,140,130,130,120,115,110,110,110,105,95,95,90,85,80,80,80,70,60,60,55,55,55,55,55,55,50,50,45,45,45,40,35,35,25,15,10,10,10,5,0,0,0,0,0],[235,160,95,90,75,70,65,65,65,65,60,60,55,50,50,50,50,50,50,40,35,35,30,30,30,30,25,25,20,20,20,20,20,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,0,0,0],[610,475,390,350,270,240,220,220,195,190,175,160,155,145,140,140,130,125,115,105,100,100,95,90,85,70,65,60,60,60,55,55,55,55,50,45,45,45,45,45,45,45,40,40,30,20,20,20,20,20,20,20,10,10,10,10,0,0,0,0,0],[525,430,335,295,270,240,225,205,185,150,150,140,140,135,130,125,95,95,95,95,95,95,95,95,90,90,85,85,85,85,75,65,55,55,50,50,45,45,45,40,40,40,35,35,25,20,20,15,15,15,15,10,10,10,10,5,5,5,0,0,0],[55,50,45,40,35,30,25,25,25,25,25,20,20,20,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0],[180,135,95,70,30,30,20,20,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[230,200,180,175,175,165,160,155,130,120,115,110,105,105,95,90,90,90,85,85,80,80,70,70,50,50,45,45,45,45,45,45,45,45,40,40,40,40,40,40,40,35,35,35,35,30,25,20,20,20,15,10,10,10,5,0,0,0,0,0,0],[170,165,85,70,65,60,55,50,45,45,40,40,40,40,40,40,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,25,25,25,25,25,25,25,25,20,20,20,20,15,15,10,10,5,0,0,0,0,0,0,0],[255,210,125,120,105,100,100,80,80,75,70,70,70,70,70,70,70,70,70,55,55,55,55,50,50,50,50,50,50,50,50,45,45,45,40,40,40,40,40,30,30,30,30,30,30,30,30,30,25,25,25,20,20,10,10,5,5,5,5,5,0],[400,185,115,60,50,30,30,20,20,20,20,20,20,20,20,20,20,20,20,20,20,15,15,15,15,15,15,15,15,15,10,10,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[435,210,130,130,110,105,100,100,85,70,70,70,65,65,65,65,65,60,60,60,60,60,55,55,50,50,50,50,50,50,50,50,50,50,45,45,40,40,40,40,40,40,35,35,30,25,25,20,20,20,15,15,15,10,5,5,5,5,0,0,0],[540,540,340,325,315,305,250,225,205,205,190,180,165,160,140,140,140,120,115,115,105,105,105,105,105,105,105,105,100,100,95,90,85,80,70,70,70,65,65,65,65,65,65,65,65,65,65,60,55,55,50,50,45,30,15,15,10,10,0,0,0],[770,700,655,645,615,610,565,540,520,505,495,490,450,430,405,395,330,330,305,290,285,275,260,245,220,215,200,200,190,185,180,155,155,150,145,135,135,135,125,120,120,115,100,100,100,90,90,80,80,75,65,45,40,35,25,15,0,0,0,0,0],[900,850,810,755,700,695,695,690,675,625,590,590,565,540,525,510,505,495,490,480,420,410,370,340,335,325,295,290,285,280,275,265,255,250,230,220,215,205,190,185,180,180,155,140,125,125,120,120,110,95,90,65,45,35,20,10,5,5,5,0,0],[675,315,245,240,230,200,190,170,150,150,145,130,110,110,105,105,105,105,80,75,70,70,65,65,65,65,65,65,65,65,65,65,65,65,65,65,60,60,60,55,55,50,50,50,40,40,40,40,40,40,40,35,35,25,25,25,25,15,5,5,0],[640,610,495,485,455,400,360,355,295,275,270,245,225,225,220,205,200,190,185,185,180,170,165,165,165,150,140,140,130,120,120,115,115,105,100,100,100,100,95,80,75,65,65,60,60,60,55,50,50,50,45,35,25,15,15,10,10,0,0,0,0],[610,530,475,460,410,335,285,280,240,240,215,180,155,155,150,145,135,130,110,105,80,80,80,80,70,70,70,70,65,65,60,50,40,40,35,35,30,30,30,30,25,20,20,15,15,15,15,15,15,15,15,15,5,5,5,5,0,0,0,0,0],[20,10,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[690,440,365,245,240,215,170,165,150,140,125,105,105,105,105,105,105,105,95,95,95,85,80,80,80,80,80,80,80,80,65,65,55,55,55,55,55,55,50,50,50,50,40,40,40,40,35,35,35,25,25,20,20,10,5,5,5,0,0,0,0],[250,245,185,165,150,150,145,140,125,125,105,105,100,90,85,85,85,80,80,80,70,70,70,70,50,50,50,50,50,45,35,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,25,20,15,15,15,15,15,15,15,5,5,0],[150,100,95,90,90,90,90,85,85,85,80,80,80,80,80,80,80,75,75,75,75,75,75,75,75,75,75,75,75,75,75,75,75,75,75,75,70,70,70,70,70,70,70,70,70,70,70,70,70,70,60,60,60,50,40,40,30,20,15,5,0],[635,435,400,395,380,350,295,280,265,265,260,260,230,230,230,225,220,220,215,215,195,195,185,185,180,180,175,175,170,165,160,160,160,155,155,155,145,145,145,145,140,135,125,125,120,115,110,110,110,110,110,90,60,50,35,20,15,15,0,0,0],[375,260,210,195,180,165,155,150,140,130,130,125,120,120,115,115,115,115,100,100,100,95,95,95,95,95,95,95,95,85,85,85,85,85,85,85,85,85,80,80,75,75,75,75,75,75,75,75,75,75,75,65,55,50,20,15,5,5,5,5,0],[140,95,80,80,70,70,70,70,70,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,60,60,60,60,60,55,55,50,45,45,40,40,40,40,40,30,30,30,30,30,25,25,25,25,25,25,20,15,10,10,5,5,5,5,5,0,0],[65,50,25,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0],[465,260,205,165,120,110,100,80,70,60,45,40,40,30,30,30,30,30,25,25,25,25,25,25,25,25,25,25,20,20,20,20,20,20,20,20,20,20,20,15,15,15,10,10,10,10,10,10,10,10,10,5,5,5,0,0,0,0,0,0,0],[430,325,260,245,245,230,205,200,185,160,150,145,145,145,145,145,145,140,135,120,120,120,120,115,115,115,110,110,105,105,95,90,80,80,80,80,65,60,55,55,55,55,50,50,50,50,50,50,35,30,30,30,20,20,10,10,5,5,0,0,0],[960,925,795,770,740,680,615,575,565,545,545,540,470,470,445,435,390,380,380,365,360,335,320,300,295,285,280,265,255,240,235,220,220,220,205,195,190,185,170,165,155,140,140,140,130,125,120,110,100,100,100,85,85,70,65,50,45,30,15,5,0],[525,415,170,135,125,110,95,90,80,75,70,65,65,65,55,55,50,40,40,40,30,30,30,25,25,20,20,20,20,20,20,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,0,0,0,0,0],[195,125,110,105,105,95,95,90,85,85,85,85,85,85,80,80,80,70,70,70,60,60,60,60,60,60,60,60,55,55,55,55,55,50,50,45,45,40,40,40,40,40,40,40,40,40,40,40,40,40,40,35,30,30,30,25,25,25,25,0,0],[450,345,240,185,180,180,160,155,150,150,145,135,130,125,115,115,110,105,105,105,95,95,85,70,70,70,60,60,55,50,35,30,30,30,30,30,30,30,30,20,10,10,10,10,10,10,10,10,10,10,10,10,10,5,0,0,0,0,0,0,0],[630,580,385,355,330,320,275,220,155,150,140,135,95,95,90,90,80,75,70,70,65,65,55,50,50,45,35,35,30,30,25,20,20,15,15,10,10,10,10,10,10,10,10,10,10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[45,40,35,30,20,20,20,20,20,20,20,20,15,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,0,0,0,0,0,0,0,0,0,0],[70,70,40,40,30,30,25,25,25,20,20,20,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0],[770,705,405,295,150,135,90,80,75,75,60,55,50,50,40,40,40,40,35,35,35,35,35,35,35,35,35,35,35,30,30,30,30,30,30,30,30,30,30,30,25,25,20,20,20,20,20,20,20,20,20,10,10,10,0,0,0,0,0,0,0],[175,50,35,30,25,25,25,25,20,20,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[895,525,420,390,310,270,220,220,180,165,125,125,125,110,100,100,90,90,90,75,60,60,50,45,45,45,35,30,30,30,30,30,30,30,30,30,25,25,25,25,15,10,10,10,10,10,10,10,10,10,10,10,5,5,5,0,0,0,0,0,0],[875,565,405,365,290,280,255,215,150,130,110,110,95,75,70,55,45,45,40,35,35,35,30,30,30,30,20,20,20,20,15,15,15,15,15,10,10,10,10,10,10,10,10,10,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],"meanRoc":[465,345,265,239,210,195,176,166,151,144,133,128,119,114,108,106,100,96,92,89,84,81,77,75,72,70,66,65,63,61,59,56,54,53,50,48,46,45,44,42,40,38,36,35,33,32,31,30,29,28,26,21,17,13,10,7,5,4,2,1,0]},"nn":{"name":"Nearest neighbor","enroll":{"mean":[0.2295,0.2091,0.1789,0.1546,0.1237,0.0967],"sd":[0.1241,0.1246,0.1063,0.095,0.0769,0.0623],"frr5":[0.0938,0.0794,0.1147,0.0973,0.0562,0.0525],"far5":[0.6347,0.5764,0.4447,0.326,0.293,0.2494]},"mean":0.0967,"sd":0.0623,"eer":[0.25,0.204,0.075,0.06,0.07,0.052,0.045,0.085,0.076,0.08,0.1,0.14,0.03,0.11,0.065,0.12,0.1,0.025,0.035,0.1,0.05,0.064,0.03,0.065,0.144,0.22,0.272,0.13,0.168,0.11,0.01,0.095,0.105,0.075,0.185,0.125,0.065,0.02,0.075,0.13,0.26,0.065,0.095,0.095,0.11,0.015,0.025,0.085,0.024,0.112,0.084],"roc":[[570,495,430,415,405,375,340,325,325,325,310,305,285,280,270,265,260,260,255,250,250,250,250,250,250,250,240,240,240,240,235,235,230,230,225,225,220,220,215,210,195,195,190,190,180,180,175,175,175,160,140,105,60,50,30,5,0,0,0,0,0],[715,615,555,545,525,470,440,440,430,410,390,385,355,340,315,290,250,240,220,220,210,195,180,175,175,170,170,155,125,110,105,100,95,85,80,65,65,60,60,55,40,30,30,30,30,30,25,25,20,20,20,15,15,15,15,10,5,0,0,0,0],[570,260,145,100,95,85,80,80,70,60,60,60,55,50,40,35,30,30,30,30,25,25,25,25,20,20,20,20,20,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,5,0,0,0,0,0,0,0],[120,100,70,70,65,65,60,60,60,60,55,55,50,50,50,45,45,45,45,45,45,40,35,30,30,30,30,30,30,30,30,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,15,10,10,5,5,5,5,5,5,5,5,5,0,0],[630,340,265,220,195,145,85,70,65,60,45,45,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,25,25,20,20,20,20,20,20,20,20,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,5,0,0,0,0,0,0,0],[295,155,85,65,55,55,45,40,40,40,35,35,30,30,25,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[185,55,55,50,50,45,30,25,20,15,15,15,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[230,225,145,145,140,130,115,105,85,80,75,75,75,75,60,55,55,50,40,35,35,35,35,30,30,25,25,25,20,20,20,20,20,20,20,15,15,15,15,15,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0],[450,365,205,175,135,105,100,85,65,55,50,45,40,40,40,35,35,25,25,25,25,20,20,15,15,15,15,15,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[750,250,135,130,115,95,85,85,80,80,70,65,50,50,40,40,40,40,35,35,30,30,30,30,30,30,30,30,30,30,25,25,25,25,25,25,25,25,15,15,15,15,15,15,15,15,15,15,15,15,15,15,0,0,0,0,0,0,0,0,0],[820,665,475,315,250,210,190,175,130,110,100,95,80,75,75,75,70,70,60,55,45,45,40,40,30,30,25,25,25,25,15,15,15,15,15,15,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[670,545,385,355,295,275,260,255,240,240,180,175,150,150,130,130,130,130,125,125,115,110,110,110,110,110,100,100,100,100,100,90,90,90,85,85,85,85,85,80,75,75,60,55,55,55,55,55,55,55,55,50,35,25,25,5,5,5,5,0,0],[115,50,35,30,20,20,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0],[560,385,295,275,265,250,205,175,150,125,110,110,100,100,100,100,85,75,70,70,60,60,60,60,60,60,50,45,45,45,40,40,35,30,30,30,25,25,20,20,20,20,20,20,20,15,15,15,15,15,10,10,5,5,5,5,0,0,0,0,0],[165,120,100,80,75,70,65,65,60,55,55,45,40,35,35,30,30,30,30,30,20,15,15,15,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,0,0,0],[850,385,305,265,230,225,210,205,180,175,175,170,120,105,100,95,95,80,75,70,65,65,65,65,55,55,55,55,55,55,55,50,50,45,45,45,30,30,25,25,20,20,20,20,20,20,20,20,20,15,15,15,15,10,10,5,0,0,0,0,0],[485,340,285,280,225,170,145,140,135,105,90,80,75,60,60,45,45,45,35,35,35,30,25,25,25,25,20,20,20,15,15,15,15,15,15,15,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0],[60,45,35,25,25,25,25,20,20,15,15,15,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0],[320,130,90,75,20,20,20,15,10,10,10,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[265,195,175,150,150,145,145,135,125,110,100,95,95,90,85,85,80,80,70,70,60,60,55,45,45,45,45,45,45,45,45,45,35,35,30,30,30,30,30,30,30,30,30,30,30,30,25,25,20,20,15,5,5,5,0,0,0,0,0,0,0],[165,85,70,65,60,50,40,40,40,40,40,35,30,30,30,30,30,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,20,20,20,20,15,15,15,15,10,5,5,5,5,0,0,0,0,0,0,0],[310,195,85,75,70,70,65,60,55,45,45,45,45,45,45,45,45,45,45,45,45,45,40,40,40,40,40,40,30,30,30,30,30,30,25,25,25,15,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,10,5,5,5,5,5,0,0],[310,140,80,30,30,20,20,20,20,20,20,20,20,20,20,20,15,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[325,195,125,110,85,70,65,65,65,60,60,50,50,50,50,50,50,45,45,45,45,45,45,35,35,35,35,35,35,35,30,30,30,25,20,20,20,20,20,20,20,20,20,20,20,20,15,15,5,5,5,5,5,5,5,5,5,0,0,0,0],[640,410,305,280,255,255,250,220,210,200,185,175,160,160,145,135,115,110,110,95,95,95,95,95,95,90,90,80,80,80,80,75,70,65,65,60,55,55,45,45,45,45,45,40,40,40,40,40,35,35,35,15,15,15,10,10,10,10,0,0,0],[915,650,640,600,580,575,550,535,455,455,435,425,410,385,345,335,290,285,260,235,230,230,220,210,185,180,170,160,150,150,150,150,150,150,145,135,130,125,115,115,105,105,90,85,75,70,65,60,55,55,55,40,30,20,10,10,5,0,0,0,0],[870,810,765,760,700,695,645,620,605,595,565,555,540,520,490,465,460,445,415,390,365,355,345,325,315,310,295,295,260,255,255,255,255,215,175,175,165,160,150,140,130,115,100,95,90,90,90,85,85,85,70,45,20,20,15,5,5,5,5,0,0],[755,310,255,245,200,200,165,160,160,155,140,140,135,130,125,125,120,115,110,105,100,95,95,90,85,75,70,60,60,55,55,55,50,50,50,50,45,45,45,45,45,40,35,35,35,35,35,35,35,35,35,30,30,20,20,15,15,10,5,5,0],[795,540,490,460,395,365,325,320,280,235,210,210,195,195,185,175,175,160,160,145,135,135,135,135,135,135,125,125,125,110,105,105,105,100,95,90,80,75,70,65,65,65,60,60,60,60,45,45,45,45,40,30,20,15,15,10,5,0,0,0,0],[680,550,475,435,380,340,305,290,145,130,110,110,110,110,100,95,85,85,70,70,55,55,50,45,40,40,40,40,40,40,40,40,40,30,30,30,20,20,20,15,15,15,15,15,15,15,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0],[15,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[715,400,250,230,215,190,135,110,95,95,95,95,85,75,75,75,75,75,60,60,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,40,40,35,35,35,25,25,25,25,25,25,25,25,25,15,10,5,5,5,0,0,0,0,0],[350,215,190,165,150,145,125,125,120,115,105,105,100,85,70,65,60,55,50,50,50,45,45,45,35,35,30,30,30,30,25,25,25,25,25,25,25,25,20,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,5,5,5,0],[135,100,90,90,90,85,80,75,70,65,65,65,60,60,60,60,60,60,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,40,30,25,20,20,5,0],[650,555,500,445,420,355,335,295,295,290,280,260,255,250,245,245,230,220,185,185,180,180,170,170,170,155,155,155,155,150,145,135,135,130,130,120,115,115,115,115,105,105,100,100,90,85,85,85,85,80,80,75,45,45,40,25,15,10,0,0,0],[430,305,260,220,210,195,175,165,150,135,135,135,125,125,125,125,110,110,110,110,105,105,105,105,105,105,95,95,90,90,85,80,80,80,80,70,70,70,70,65,65,65,65,65,60,60,60,55,55,55,55,55,50,20,15,10,5,5,5,5,0],[125,90,80,70,65,65,65,65,65,60,60,60,60,60,55,55,55,55,55,50,45,45,45,40,40,40,40,40,30,30,25,25,25,25,25,25,25,20,20,15,15,15,15,15,15,15,15,15,15,15,15,5,5,5,5,5,5,5,5,0,0],[30,20,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0],[375,250,150,140,120,115,110,75,65,55,40,40,30,30,25,25,25,25,25,25,25,25,20,20,20,20,20,20,20,20,20,20,15,15,15,15,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0],[425,375,250,230,210,210,200,180,155,140,140,135,130,130,125,110,105,105,105,100,95,90,90,90,90,85,75,75,70,70,70,65,55,50,45,40,40,40,40,35,35,35,30,30,30,30,20,20,20,20,20,15,10,10,5,5,5,5,5,0,0],[910,815,760,725,670,655,615,605,595,545,525,510,455,440,420,410,405,365,345,345,330,330,325,310,285,265,260,245,230,225,220,205,170,170,150,140,140,140,140,135,130,130,110,110,110,100,90,90,90,90,85,85,70,55,40,25,20,15,5,5,0],[375,280,195,140,100,95,65,65,55,50,50,50,50,45,35,35,35,35,20,20,20,20,20,20,20,15,15,15,15,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0],[725,200,145,125,120,115,110,95,95,95,95,95,90,90,90,85,85,85,85,85,85,85,80,80,75,75,75,70,70,60,60,60,60,60,60,55,55,55,55,55,55,55,55,55,50,50,50,50,50,45,45,45,40,30,30,30,25,20,5,0,0],[610,315,180,175,150,135,130,130,130,125,95,90,90,90,70,70,65,65,65,65,65,65,50,50,45,45,40,35,35,35,25,20,15,15,15,15,15,15,15,15,15,15,15,10,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0],[655,460,375,325,285,270,260,225,210,115,115,110,100,85,65,60,45,45,45,45,40,35,30,30,25,25,15,15,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[15,15,15,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[55,45,30,25,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0],[790,490,425,180,135,105,105,105,85,85,70,65,60,60,45,45,45,40,30,30,30,30,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,20,20,20,20,20,20,20,20,20,15,15,15,10,10,10,5,5,0,0,0,0,0,0,0],[200,30,25,10,10,10,10,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[725,490,295,240,230,205,185,175,160,140,125,115,90,85,80,75,70,70,55,50,35,30,30,25,25,25,20,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[645,340,295,220,150,130,115,110,85,80,80,80,80,55,50,45,30,30,20,20,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],"meanRoc":[462,302,237,208,185,171,156,147,134,124,115,112,103,99,92,88,83,80,74,72,68,66,64,61,59,58,55,53,50,49,47,46,43,41,39,38,36,35,33,32,30,29,27,26,25,25,23,23,22,21,20,17,13,10,8,5,4,3,2,0,0]}}}</script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var IDS = KP.DETECTORS.map(function (d) { return d.id; });
+  var PRE = JSON.parse($('kp-bench-results').textContent);
+  var ui = { res: PRE, live: false, subject: -1, zoom: true, metric: 'eer', drawn: false, hits: [] };
+  var f3 = function (v) { return v.toFixed(3); };
+
+  // ---------- tabs (ARIA tabs: arrow keys, Home/End) ----------
+  var TABS = ['try', 'bench', 'how'];
+  function showTab(t, focus) {
+    if (TABS.indexOf(t) < 0) t = 'try';
+    TABS.forEach(function (k) {
+      var b = $('tab-' + k), on = k === t;
+      b.setAttribute('aria-selected', on); b.tabIndex = on ? 0 : -1; $('view-' + k).hidden = !on;
+      if (on && focus) b.focus();
+    });
+    try { localStorage.setItem('keyprint.tab', t); } catch (e) { }
+    if (t === 'bench') drawAll();
+    document.dispatchEvent(new CustomEvent('kp:tab', { detail: t }));
+  }
+  TABS.forEach(function (k, i) {
+    var b = $('tab-' + k);
+    b.addEventListener('click', function () { showTab(k); });
+    b.addEventListener('keydown', function (e) {
+      var n = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 }[e.key];
+      if (n == null) return;
+      e.preventDefault(); showTab(TABS[(n + TABS.length) % TABS.length], true);
+    });
+  });
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest('[data-goto]'); if (!a) return;
+    e.preventDefault(); showTab(a.dataset.goto, true); window.scrollTo(0, 0);
+  });
+
+  // ---------- theme-aware canvas helpers ----------
+  function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+  function colors() { return { c: [css('--c1'), css('--c2'), css('--c3')], ink: css('--ink'), muted: css('--muted'), line: css('--line'), surface: css('--surface'), font: css('--font-mono') }; }
+  function setup(cv) {
+    // backing store = CSS size × devicePixelRatio (sharp on retina); height shrinks on narrow screens
+    var dpr = window.devicePixelRatio || 1, W = cv.clientWidth || 600, base = +(cv.dataset.h || (cv.dataset.h = cv.getAttribute('height')));
+    var H = Math.round(Math.min(base, Math.max(base * 0.65, W * 0.8)));
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + 'px';
+    var g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+    return { g: g, W: W, H: H };
+  }
+  function axes(g, C, box, xt, yt, xlab, ylab) {
+    g.font = '10px ' + C.font; g.lineWidth = 1;
+    xt.forEach(function (t) {
+      g.strokeStyle = C.line; g.beginPath(); g.moveTo(t.x, box.t); g.lineTo(t.x, box.b); g.stroke();
+      g.fillStyle = C.muted; g.textAlign = 'center'; g.fillText(t.l, t.x, box.b + 14);
+    });
+    yt.forEach(function (t) {
+      g.strokeStyle = C.line; g.beginPath(); g.moveTo(box.l, t.y); g.lineTo(box.r, t.y); g.stroke();
+      g.fillStyle = C.muted; g.textAlign = 'right'; g.fillText(t.l, box.l - 6, t.y + 3);
+    });
+    g.fillStyle = C.muted; g.textAlign = 'center'; g.fillText(xlab, (box.l + box.r) / 2, box.b + 30);
+    g.save(); g.translate(12, (box.t + box.b) / 2); g.rotate(-Math.PI / 2); g.fillText(ylab, 0, 0); g.restore();
+  }
+  function line(g, pts, color, w, dash) {
+    g.strokeStyle = color; g.lineWidth = w; g.setLineDash(dash || []); g.beginPath();
+    pts.forEach(function (p, i) { if (i) g.lineTo(p[0], p[1]); else g.moveTo(p[0], p[1]); });
+    g.stroke(); g.setLineDash([]);
+  }
+
+  // ---------- table ----------
+  function renderTable() {
+    var r = ui.res, i10 = r.sizes.indexOf(10);
+    $('b-protocol').textContent = 'CMU DSL-StrongPasswordData (' + r.meta.subjects + ' subjects, .tie5Roanl). Per subject: ' + r.meta.protocol +
+      ' (' + r.meta.nGen + ' genuine, ' + r.meta.nImp + ' impostor). EER = threshold where FAR = FRR, linearly interpolated on the ROC.';
+    $('b-source').textContent = ui.live ? 'live run' : 'precomputed · ' + (r.meta.generated || '');
+    $('b-source').className = 'badge' + (ui.live ? ' live' : '');
+    $('b-table').innerHTML = '<table><thead><tr><th>Detector</th><th class="num">KeyPrint EER (SD)</th><th class="num">Paper EER (SD)</th><th class="num">Δ</th>' +
+      (i10 >= 0 ? '<th class="num">EER @ 10 reps</th><th class="num">FRR @ 10 reps, 5% target</th>' : '') + '</tr></thead><tbody>' +
+      IDS.map(function (id, k) {
+        var o = r.det[id], p = r.paper[id], d = o.mean - p.mean;
+        return '<tr><td><span class="chip" style="background:none;color:' + colors().c[k] + '">■</span> ' + o.name + '</td>' +
+          '<td class="num">' + f3(o.mean) + ' (' + f3(o.sd) + ')</td><td class="num">' + f3(p.mean) + ' (' + f3(p.sd) + ')</td>' +
+          '<td class="num ' + (d <= 0 ? 'good' : 'worse') + '">' + (d >= 0 ? '+' : '') + f3(d) + '</td>' +
+          (i10 >= 0 ? '<td class="num">' + f3(o.enroll.mean[i10]) + '</td><td class="num">' + (o.enroll.frr5[i10] * 100).toFixed(1) + '%</td>' : '') + '</tr>';
+      }).join('') + '</tbody></table>';
+    $('b-enroll-table').innerHTML = '<table><thead><tr><th class="num">Training reps</th>' + IDS.map(function (id) { return '<th class="num">' + r.det[id].name + ' EER</th>'; }).join('') +
+      IDS.map(function (id) { return '<th class="num">' + r.det[id].name.split(' ')[0] + ' FRR / FAR @5%</th>'; }).join('') + '</tr></thead><tbody>' +
+      r.sizes.map(function (n, i) {
+        return '<tr><td class="num">' + n + '</td>' + IDS.map(function (id) { var e = r.det[id].enroll; return '<td class="num">' + f3(e.mean[i]) + ' ± ' + f3(e.sd[i]) + '</td>'; }).join('') +
+          IDS.map(function (id) { var e = r.det[id].enroll; return '<td class="num">' + (e.frr5[i] * 100).toFixed(1) + '% / ' + (e.far5[i] * 100).toFixed(1) + '%</td>'; }).join('') + '</tr>';
+      }).join('') + '</tbody></table>';
+    var sel = $('b-subject'), order = r.ids.map(function (id, i) { return i; }).sort(function (a, b) { return r.ids[a] < r.ids[b] ? -1 : 1; });
+    sel.innerHTML = '<option value="-1">All (mean)</option>' + order.map(function (i) { return '<option value="' + i + '">' + r.ids[i] + '</option>'; }).join('');
+    sel.value = String(ui.subject);
+    var e = r.det.manhattan.enroll, i200 = r.sizes.length - 1;
+    $('en-note').textContent = 'Same test set at every size (last 200 genuine + 250 impostor reps); training = first n reps. The Try it tab enrolls 10: Scaled Manhattan EER ' +
+      f3(e.mean[r.sizes.indexOf(10)]) + ' vs ' + f3(e.mean[i200]) + ' at 200, and the 5%-FRR threshold set from 10 leave-one-out scores lets through ' +
+      (e.frr5[r.sizes.indexOf(10)] * 100).toFixed(0) + '% false rejects on held-out reps: a quantile of 10 scores is noisy and runs low, and 10 reps from one sitting miss the drift between sessions.';
+  }
+
+  function renderHowSize() {
+    var r = PRE, want = [5, 10, 20, 50, 100, 200];
+    $('how-size').innerHTML = '<table><thead><tr><th class="num">Reps</th>' + IDS.map(function (id) { return '<th class="num">' + r.det[id].name.split(' ')[0] + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      want.map(function (n) {
+        var i = r.sizes.indexOf(n); if (i < 0) return '';
+        return '<tr' + (n === 10 ? ' style="font-weight:700"' : '') + '><td class="num">' + n + (n === 10 ? ' (this demo)' : '') + '</td>' + IDS.map(function (id) { return '<td class="num">' + f3(r.det[id].enroll.mean[i]) + '</td>'; }).join('') + '</tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  // ---------- ROC ----------
+  function drawRoc() {
+    var C = colors(), s = setup($('c-roc')), g = s.g, r = ui.res, grid = r.meta.faGrid;
+    var xmax = ui.zoom ? 0.3 : 1, ymin = ui.zoom ? 0.5 : 0;
+    var box = { l: 44, r: s.W - 12, t: 10, b: s.H - 40 };
+    var X = function (v) { return box.l + v / xmax * (box.r - box.l); }, Y = function (v) { return box.b - (v - ymin) / (1 - ymin) * (box.b - box.t); };
+    var xs = ui.zoom ? [0, .05, .1, .15, .2, .25, .3] : [0, .2, .4, .6, .8, 1], ys = ui.zoom ? [.5, .6, .7, .8, .9, 1] : [0, .2, .4, .6, .8, 1];
+    axes(g, C, box, xs.map(function (v) { return { x: X(v), l: v.toFixed(2) }; }), ys.map(function (v) { return { y: Y(v), l: v.toFixed(1) }; }), 'false-alarm rate (FAR)', 'hit rate (1 − FRR)');
+    g.save(); g.beginPath(); g.rect(box.l, box.t, box.r - box.l, box.b - box.t); g.clip();
+    line(g, [[X(0), Y(1)], [X(Math.min(xmax, 1 - ymin)), Y(1 - Math.min(xmax, 1 - ymin))]], C.muted, 1, [4, 4]);
+    var curve = function (arr) {
+      var pts = [];
+      grid.forEach(function (fa, k) { if (fa <= xmax + 1e-9) pts.push([X(fa), Y(1 - arr[k] / 1000)]); });
+      return pts;
+    };
+    IDS.forEach(function (id, k) {
+      var o = r.det[id];
+      if (ui.subject >= 0) { line(g, curve(o.meanRoc), C.c[k], 1, [3, 3]); line(g, curve(o.roc[ui.subject]), C.c[k], 2.25); }
+      else line(g, curve(o.meanRoc), C.c[k], 2.25);
+    });
+    g.restore();
+    $('b-legend').innerHTML = IDS.map(function (id, k) {
+      var o = r.det[id], v = ui.subject >= 0 ? o.eer[ui.subject] : o.mean;
+      return '<span><i style="background:' + C.c[k] + '"></i>' + o.name + ' <span class="mono hint">EER ' + f3(v) + '</span></span>';
+    }).join('');
+    $('roc-note').textContent = ui.subject >= 0
+      ? 'Subject ' + r.ids[ui.subject] + ' (solid) against the 51-subject mean (dotted). Dashed diagonal: FAR = FRR.'
+      : 'Mean over ' + r.meta.subjects + ' subjects of the best hit rate at each false-alarm budget. Dashed diagonal: FAR = FRR; each curve crosses it near its EER.';
+  }
+
+  // ---------- enrollment curve ----------
+  function drawEnroll() {
+    var C = colors(), s = setup($('c-enroll')), g = s.g, r = ui.res, key = ui.metric === 'eer' ? 'mean' : 'frr5';
+    var box = { l: 44, r: s.W - 14, t: 10, b: s.H - 40 };
+    var lo = Math.log(r.sizes[0]), hi = Math.log(r.sizes[r.sizes.length - 1]);
+    var ymax = 0; IDS.forEach(function (id) { r.det[id].enroll[key].forEach(function (v) { ymax = Math.max(ymax, v); }); });
+    ymax = Math.ceil(ymax * 1.1 * 20) / 20 || 0.1;
+    var X = function (n) { return box.l + (Math.log(n) - lo) / (hi - lo) * (box.r - box.l); }, Y = function (v) { return box.b - v / ymax * (box.b - box.t); };
+    var yt = []; for (var v = 0; v <= ymax + 1e-9; v += ymax > 0.4 ? 0.1 : 0.05) yt.push({ y: Y(v), l: v.toFixed(2) });
+    axes(g, C, box, r.sizes.map(function (n) { return { x: X(n), l: String(n) }; }), yt, 'training repetitions (log scale)', ui.metric === 'eer' ? 'mean EER' : 'held-out FRR');
+    if (ui.metric === 'frr') { line(g, [[box.l, Y(0.05)], [box.r, Y(0.05)]], C.ink, 1, [5, 4]); g.fillStyle = C.ink; g.textAlign = 'left'; g.fillText('target 5%', box.l + 4, Y(0.05) - 5); }
+    IDS.forEach(function (id, k) {
+      var e = r.det[id].enroll, pts = r.sizes.map(function (n, i) { return [X(n), Y(e[key][i])]; });
+      line(g, pts, C.c[k], 2);
+      pts.forEach(function (p) { g.fillStyle = C.c[k]; g.beginPath(); g.arc(p[0], p[1], 3.5, 0, 7); g.fill(); });
+      if (ui.metric === 'eer') {   // paper reference at 200 reps: hollow diamond
+        var px = X(200) - 6 - 4 * k, py = Y(r.paper[id].mean);
+        g.strokeStyle = C.c[k]; g.lineWidth = 1.5; g.beginPath(); g.moveTo(px, py - 5); g.lineTo(px + 5, py); g.lineTo(px, py + 5); g.lineTo(px - 5, py); g.closePath(); g.stroke();
+      }
+    });
+    if (ui.metric === 'eer') { g.fillStyle = C.muted; g.textAlign = 'right'; g.fillText('◇ paper', box.r, box.t + 10); }
+  }
+
+  // ---------- per-subject spread ----------
+  function drawSpread() {
+    var C = colors(), s = setup($('c-spread')), g = s.g, r = ui.res;
+    var box = { l: 130, r: s.W - 14, t: 8, b: s.H - 34 }, rowH = (box.b - box.t) / IDS.length;
+    if (s.W < 480) box.l = 92;
+    var xmax = 0; IDS.forEach(function (id) { xmax = Math.max(xmax, r.paper[id].mean * 1.15); r.det[id].eer.forEach(function (v) { xmax = Math.max(xmax, v); }); });
+    xmax = Math.ceil(xmax * 10) / 10 || 0.1;
+    var X = function (v) { return box.l + v / xmax * (box.r - box.l); }, xt = [];
+    for (var v = 0; v <= xmax + 1e-9; v += xmax > 0.5 ? 0.1 : 0.05) xt.push({ x: X(v), l: v.toFixed(2) });
+    axes(g, C, box, xt, [], 'per-subject EER', '');
+    ui.hits = [];
+    IDS.forEach(function (id, k) {
+      var o = r.det[id], cy = box.t + rowH * (k + 0.5);
+      g.fillStyle = C.ink; g.textAlign = 'right'; g.font = '12px ' + C.font; g.fillText(s.W < 480 ? o.name.split(' ')[0] : o.name, box.l - 10, cy + 4); g.font = '10px ' + C.font;
+      o.eer.forEach(function (e, i) {
+        var jit = ((i * 37) % 17 / 16 - 0.5) * rowH * 0.55, x = X(e), y = cy + jit, sel = i === ui.subject;
+        g.globalAlpha = sel ? 1 : 0.55; g.fillStyle = C.c[k]; g.beginPath(); g.arc(x, y, sel ? 5 : 3.5, 0, 7); g.fill();
+        if (sel) { g.globalAlpha = 1; g.strokeStyle = C.ink; g.lineWidth = 1.5; g.stroke(); }
+        ui.hits.push({ x: x, y: y, i: i, k: k, e: e });
+      });
+      g.globalAlpha = 1;
+      line(g, [[X(o.mean), cy - rowH * 0.4], [X(o.mean), cy + rowH * 0.4]], C.ink, 2);
+      line(g, [[X(r.paper[id].mean), cy - rowH * 0.4], [X(r.paper[id].mean), cy + rowH * 0.4]], C.muted, 1.5, [3, 2]);
+    });
+    g.fillStyle = C.muted; g.textAlign = 'right'; g.fillText('solid = KeyPrint mean · dashed = paper mean', box.r, s.H - 4);
+  }
+  var spread = $('c-spread'), tip = $('b-tip');
+  function nearest(e) {
+    var b = spread.getBoundingClientRect(), mx = e.clientX - b.left, my = e.clientY - b.top, best = null, bd = 64;
+    ui.hits.forEach(function (h) { var d = (h.x - mx) * (h.x - mx) + (h.y - my) * (h.y - my); if (d < bd) { bd = d; best = h; } });
+    return best;
+  }
+  spread.addEventListener('pointermove', function (e) {
+    var h = nearest(e);
+    if (!h) { tip.hidden = true; spread.style.cursor = ''; return; }
+    spread.style.cursor = 'pointer'; tip.hidden = false;
+    tip.textContent = ui.res.ids[h.i] + ' · ' + ui.res.det[IDS[h.k]].name + ' · EER ' + f3(h.e);
+    tip.style.left = (e.clientX + 12) + 'px'; tip.style.top = (e.clientY - 28) + 'px';
+  });
+  spread.addEventListener('pointerleave', function () { tip.hidden = true; });
+  spread.addEventListener('click', function (e) { var h = nearest(e); ui.subject = h ? (h.i === ui.subject ? -1 : h.i) : -1; $('b-subject').value = String(ui.subject); drawAll(); });
+  $('b-subject').addEventListener('change', function (e) { ui.subject = +e.target.value; drawAll(); });
+
+  function seg(a, b, on) { $(a).setAttribute('aria-pressed', on); $(b).setAttribute('aria-pressed', !on); }
+  $('roc-zoom').addEventListener('click', function () { ui.zoom = true; seg('roc-zoom', 'roc-full', true); drawRoc(); });
+  $('roc-full').addEventListener('click', function () { ui.zoom = false; seg('roc-zoom', 'roc-full', false); drawRoc(); });
+  $('en-eer').addEventListener('click', function () { ui.metric = 'eer'; seg('en-eer', 'en-frr', true); drawEnroll(); });
+  $('en-frr').addEventListener('click', function () { ui.metric = 'frr'; seg('en-eer', 'en-frr', false); drawEnroll(); });
+
+  function drawAll() { if ($('view-bench').hidden) return; drawRoc(); drawEnroll(); drawSpread(); }
+  // redraw on box-width changes (ResizeObserver) and on devicePixelRatio changes (zoom, moving to another screen)
+  var pend = 0, schedule = function () { if (!pend) pend = requestAnimationFrame(function () { pend = 0; drawAll(); }); };
+  if (window.ResizeObserver) {
+    var cw = new WeakMap();
+    var ro = new ResizeObserver(function (entries) {
+      if (entries.some(function (en) { var w = Math.round(en.contentRect.width); if (cw.get(en.target) === w) return false; cw.set(en.target, w); return true; })) schedule();
+    });
+    document.querySelectorAll('#view-bench .chart').forEach(function (el) { ro.observe(el); });
+  } else window.addEventListener('resize', schedule);
+  (function watchDpr() {
+    if (!window.matchMedia) return;
+    var mq = matchMedia('(resolution: ' + (window.devicePixelRatio || 1) + 'dppx)');
+    var on = function () { mq.removeEventListener('change', on); schedule(); watchDpr(); };
+    if (mq.addEventListener) mq.addEventListener('change', on);
+  })();
+  if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { renderTable(); drawAll(); });
+  new MutationObserver(function () { renderTable(); drawAll(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  // ---------- run live ----------
+  var drop = $('b-drop'), busy = false;
+  function bstatus(msg, kind) { var s = $('b-status'); s.textContent = msg; s.className = 'status' + (kind ? ' ' + kind : ''); }
+  function progress(d, t) { $('b-pfill').style.width = (d / t * 100).toFixed(1) + '%'; bstatus('Running… ' + d + ' / ' + t + ' subject × size steps'); }
+  function finish(res, t0, how) {
+    busy = false; drop.classList.remove('busy');
+    res.meta.generated = new Date().toISOString().slice(0, 10);
+    ui.res = res; ui.live = true; ui.subject = -1; $('b-revert').hidden = false;
+    renderTable(); drawAll();
+    bstatus('Done in ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s (' + how + '). Tables and charts now show your run.', 'ok');
+  }
+  function fail(msg) { busy = false; drop.classList.remove('busy'); $('b-pfill').style.width = '0'; bstatus('Could not run: ' + msg, 'bad'); }
+  function mainThread(text, t0) {   // fallback when a Worker can't be created here
+    var run;
+    try { run = KPB.createRun(KPB.parseCSV(text)); } catch (e) { fail(e.message); return; }
+    (function tick() {
+      var until = Date.now() + 40;
+      try { while (Date.now() < until && run.step()); } catch (e) { fail(e.message); return; }
+      progress(run.done(), run.total);
+      if (run.done() < run.total) setTimeout(tick, 0); else finish(run.result(), t0, 'main thread');
+    })();
+  }
+  function runLive(text) {
+    if (busy) return; busy = true; drop.classList.add('busy'); $('b-pfill').style.width = '0';
+    var t0 = Date.now(), w = null, url = null, started = false;
+    var src = $('kp-detectors').textContent + '\n' + $('kp-bench').textContent + '\n' +
+      'onmessage=function(e){try{var s=KPB.parseCSV(e.data);var run=KPB.createRun(s);postMessage({t:"p",d:0,n:run.total});' +
+      'while(run.step()){postMessage({t:"p",d:run.done(),n:run.total});}postMessage({t:"done",r:run.result()});}catch(err){postMessage({t:"err",m:String(err&&err.message||err)});}};';
+    try { url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' })); w = new Worker(url); } catch (e) { w = null; }
+    if (!w) { bstatus('Web Workers are unavailable here; running on the main thread.'); mainThread(text, t0); return; }
+    w.onmessage = function (e) {
+      var m = e.data; started = true;
+      if (m.t === 'p') progress(m.d, m.n);
+      else if (m.t === 'done') { w.terminate(); URL.revokeObjectURL(url); finish(m.r, t0, 'Web Worker'); }
+      else if (m.t === 'err') { w.terminate(); URL.revokeObjectURL(url); fail(m.m); }
+    };
+    w.onerror = function (e) {
+      e.preventDefault(); w.terminate(); URL.revokeObjectURL(url);
+      if (!started) { bstatus('Worker blocked here; running on the main thread.'); mainThread(text, t0); } else fail(e.message || 'worker error');
+    };
+    w.postMessage(text); bstatus('Parsing CSV…');
+  }
+  function readFile(file) {
+    if (!file) return;
+    if (file.size > 50e6) { bstatus('That file is too large to be the CMU CSV.', 'bad'); return; }
+    var rd = new FileReader(); rd.onload = function () { runLive(rd.result); }; rd.onerror = function () { fail('could not read the file'); }; rd.readAsText(file);
+  }
+  $('b-file').addEventListener('change', function (e) { readFile(e.target.files[0]); e.target.value = ''; });
+  ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
+  drop.addEventListener('drop', function (e) { readFile(e.dataTransfer.files[0]); });
+  drop.addEventListener('click', function () { if (!busy) $('b-file').click(); });
+  drop.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!busy) $('b-file').click(); } });
+  $('b-revert').addEventListener('click', function () { ui.res = PRE; ui.live = false; ui.subject = -1; $('b-revert').hidden = true; renderTable(); drawAll(); bstatus('Showing precomputed results.'); });
+
+  renderTable(); renderHowSize();
+  var t0 = 'try'; try { t0 = localStorage.getItem('keyprint.tab') || 'try'; } catch (e) { }
+  var h = (location.hash || '').slice(1); if (TABS.indexOf(h) >= 0) t0 = h;
+  showTab(t0 === 'live' ? 'try' : t0);
+})();
+</script>
+<!--ARTIFACT-BODY-END-->
+</body>
+</html>

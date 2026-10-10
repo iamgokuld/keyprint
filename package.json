@@ -1,0 +1,20 @@
+{
+  "name": "keyprint",
+  "version": "1.1.0",
+  "description": "Keystroke-dynamics demo: the page learns your typing rhythm and rejects anyone else typing the same passphrase.",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "test": "node test_detectors.js && node test_capture.js && node test_touch.js",
+    "e2e": "node test_e2e.js",
+    "bench": "node bench.js DSL-StrongPasswordData.csv",
+    "bench:mobile": "node bench-mobile.js data/collect",
+    "bench:mobile:synthetic": "node bench-mobile.js --synthetic --out bench-mobile-results.json"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.0"
+  }
+}
