@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>
-/* Layout: instrument panel — capture strip on top, live readouts left, profile/calibration rail right. */
+/* Layout: capture strip on top, live readouts left, profile/calibration rail right. */
 :root{
   --bg:#f3f5f8; --surface:#ffffff; --ink:#151a23; --muted:#5b6577; --line:#d9dee7;
   --accent:#2a55c9; --accent-soft:#e3eafb;
@@ -251,7 +251,7 @@ button,a,label,summary,select,input{touch-action:manipulation}
   <header>
     <div class="brand">
       <h1>KeyPrint</h1>
-      <p class="tagline"><strong>Your password is public; your rhythm isn’t.</strong> Type <span class="mono">.tie5Roanl</span> ten times so the page learns how you type it, then let a friend try the same password and watch it get rejected.</p>
+      <p class="tagline">Type <span class="mono">.tie5Roanl</span> ten times so the page learns how you type it. Then let a friend type the same password and see whether their timing gets them in.</p>
     </div>
     <div class="tabs" role="tablist" aria-label="Sections">
       <button role="tab" id="tab-try" aria-selected="true" aria-controls="view-try" tabindex="0">Try it</button>
@@ -307,7 +307,7 @@ button,a,label,summary,select,input{touch-action:manipulation}
         <div class="progress" id="progress" aria-hidden="true"></div>
         <p class="hint" id="en-msg">Type the passphrase 10 times at your natural pace. Each clean attempt becomes a 31-feature sample. Training runs automatically after the 10th.</p>
         <div class="callout">
-          <p><strong>Why 10 reps is a demo, not a lock.</strong> On the CMU benchmark, training on 10 reps gives about twice the error of 200 reps (mean EER 0.21–0.23 vs 0.10–0.11), and a 5% false-reject target set from only 10 scores lets through 8–17% false rejects. Expect the page to reject you now and then. <a href="#" data-goto="bench">See the curve</a>.</p>
+          <p><strong>Ten samples is a small profile.</strong> On the CMU benchmark, training on 10 reps gives about twice the error of 200 reps (mean EER 0.21–0.23 vs 0.10–0.11), and a 5% false-reject target set from only 10 scores lets through 8–17% false rejects. Expect the page to reject you now and then. <a href="#" data-goto="bench">See the curve</a>.</p>
         </div>
       </section>
 

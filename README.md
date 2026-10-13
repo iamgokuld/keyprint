@@ -1,79 +1,57 @@
-# KeyPrint, Your Typing Has a Fingerprint
+# KeyPrint
 
-[![Try KeyPrint live](https://img.shields.io/badge/%E2%96%B6%20Try%20KeyPrint%20live-7c3aed?style=for-the-badge&logo=github)](https://iamgokuld.github.io/keyprint/)
+KeyPrint is a browser demo of keystroke dynamics. You type the passphrase `.tie5Roanl` ten times, the page builds a profile of your timing, and then it tries to tell your later attempts apart from someone else typing the same password.
 
-**Your password is public. Your rhythm isn't.** KeyPrint learns how you type a passphrase and turns down anyone else who types the same one, even when they get every letter right.
+Live site: https://iamgokuld.github.io/keyprint/
 
-**Live site:** [https://iamgokuld.github.io/keyprint/](https://iamgokuld.github.io/keyprint/)
+## What it measures
 
----
+For each of the 11 keys (`.tie5Roanl` plus Return) the page records when the key went down and when it came up. From that it computes 31 features:
 
-## Why would anyone build this?
+- 11 hold times (how long each key is held)
+- 10 press-to-press times (one key down to the next key down)
+- 10 release-to-press times (one key up to the next key down)
 
-> **Visitor:** "I typed the right password. Why is it asking me again?"
->
-> **KeyPrint:** "You typed the right letters. You did not type them *like you*."
->
-> **Visitor:** "That's rude."
->
-> **KeyPrint:** "It's keystroke dynamics. Very polite, very mathematical."
+A typo, Backspace or leaving the field throws the attempt away.
 
-Passwords check what you typed. KeyPrint checks how long you held each key, how fast you moved between them, and whether you hesitated before the 'z'. Your rhythm is hard to copy by accident.
+## How it decides
 
----
+Three detectors score a new attempt against your ten enrollment samples:
 
-## What you can do
+- Scaled Manhattan: per-feature distance from your mean, scaled by your usual spread.
+- Mahalanobis: distance from your mean that accounts for features moving together. The covariance is shrunk toward the diagonal because 10 samples are not enough to invert a 31x31 matrix.
+- Nearest neighbor: Mahalanobis distance to your closest single sample.
 
-- **Enroll:** type the passphrase `.tie5Roanl` ten times so KeyPrint learns your rhythm.
-- **Verify:** type it once more and watch three detectors vote on whether it is really you.
-- **Phone mode:** on a phone, an on-screen keypad records where your thumb lands, not just when.
-- **Save profiles:** profiles live in your browser, and you can export them as JSON if you want a backup or a souvenir.
-- **Benchmark:** the Benchmark tab runs on the CMU keystroke dataset and draws an ROC curve, an enrollment curve, and per-subject EER numbers.
-- **Pick a theme:** light or dark, whichever suits your late-night typing.
+Each detector's threshold comes from leave-one-out scores on your own samples, set to a target false-reject rate (5% by default). An attempt is accepted when 2 of the 3 detectors pass.
 
----
+On a touch screen the page uses its own on-screen keypad instead of the phone keyboard, because soft keyboards report unreliable key timings. It also records where each tap lands on the key, which adds 22 position features. Phone and keyboard profiles are kept separate.
 
-## More dialogue, because typing is personal
+## Benchmark
 
-> **Friend 1:** "Let me log in on your laptop."
->
-> **Friend 2:** "Sure, the passphrase is `.tie5Roanl`."
->
-> **Friend 1:** "Got it. Oh, it's asking me to type it ten times first."
->
-> **Friend 2:** "That's how it learns you. Don't rush it."
->
-> **Friend 1:** "I'm rushing it."
->
-> **Friend 2:** "It noticed."
+The Benchmark tab compares the detectors against Killourhy and Maxion's CMU keystroke dataset (DSN 2009): equal-error rates, ROC curves, error vs. enrollment size, and per-subject spread. With 10 training reps the mean EER is roughly twice what it is with 200, so expect the demo to reject you now and then.
 
----
+To rerun it from the command line:
 
-## How it works
+```
+./scripts/get-data.sh   # downloads DSL-StrongPasswordData.csv from cs.cmu.edu
+npm run bench
+```
 
-1. **Capture:** KeyPrint records the timing of each key press and release.
-2. **Enroll:** after ten good attempts, it builds a profile of your typing rhythm.
-3. **Verify:** three detectors score a new attempt against that profile:
-   - **Scaled Manhattan** compares timing gaps, scaled to the spread you usually show.
-   - **Mahalanobis** measures how far an attempt sits from your usual pattern, accounting for how the timings move together.
-   - **Nearest neighbor** checks whether the attempt looks like one of your own past tries.
-4. **Decide:** the page accepts the attempt when **2 of the 3** detectors pass.
+## Running locally
 
-The whole thing is plain JavaScript in one HTML file. No libraries, no server, and nothing leaves your browser.
+Everything is in `index.html`, plain JavaScript with no build step. Open it in a browser.
 
----
+Tests need Node 18 or newer:
 
-## Run it
+```
+npm test        # detector, capture and touch tests
+npm run e2e     # browser tests, needs Playwright
+```
 
-- **Easiest:** open the [live site](https://iamgokuld.github.io/keyprint/).
-- **Locally:** clone this repo and open `index.html` in any modern browser. Double-clicking it works.
+## Limits
 
----
+This is a demo of a research technique, not an authentication system. Typing rhythm drifts between days and keyboards, and a profile from one sitting will reject you more often later. Timings and profiles stay in your browser's localStorage; export and import are JSON files you control.
 
-## A quick honesty note
+## License
 
-KeyPrint is a **learning demo**. It is a toy for exploring keystroke dynamics, not a security product. Please do not use it to protect anything that matters, such as your bank, your email, or your secret stash of snack money.
-
----
-
-*Made for curiosity. Licensed under the terms in [LICENSE](LICENSE).*
+MIT, see [LICENSE](LICENSE).
