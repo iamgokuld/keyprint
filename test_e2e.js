@@ -169,8 +169,10 @@ async function typeKeys(page, keys) {
   for (let k = 1; k < 10; k++) { await tapAttempt(page, t, '#keypad', { id0: 1000 * k, off: (i) => [0.05 * Math.sin(i + k), 0.1] }); await waitIdle(page); }
   check('10 keypad samples -> trained phone profile', await page.evaluate(() => KeyPrint.trained() && KeyPrint.samples() === 10));
   await tapAttempt(page, t, '#keypad', { id0: 50000, off: () => [0, 0.1] }); await waitIdle(page);
-  check('verify attempt gives a verdict', /Accepted|Rejected/.test(await page.textContent('#status')));
-  check('"Is it really you?" shown after a reject, hidden after an accept', (await page.isVisible('#recover-open')) === /Rejected/.test(await page.textContent('#status')));
+  const verdict = () => page.evaluate(() => { const s = document.getElementById('status').textContent; return s === 'It is you.' ? 'yes' : KeyPrint.notYou().includes(s) ? 'no' : s; });
+  const v1 = await verdict();
+  check('verify attempt gives a verdict ("It is you." or a funny line, no detector count)', (v1 === 'yes' || v1 === 'no') && !/of 3 detectors/.test(await page.textContent('#status')), v1);
+  check('"Is it really you?" shown after a reject, hidden after an accept', (await page.isVisible('#recover-open')) === (v1 === 'no'));
   await page.screenshot({ path: path.join(SHOTS, 'mobile-375.png') });
   await page.screenshot({ path: path.join(SHOTS, 'mobile-375-full.png'), fullPage: true });
   const prof = await page.evaluate(() => JSON.parse(localStorage.getItem('keyprint.profile.mobile.v2')));
@@ -251,7 +253,7 @@ async function typeKeys(page, keys) {
   check('Verify, wrong password: rejected, "Is it really you?" still offered', /Rejected: that is not the password/.test(await page.textContent('#status')) && await page.isVisible('#recover-open'));
   // right password, but this robot is not the synthetic typist: rejected on rhythm -> "Is it really you?" -> security question
   await typeKeys(page, PASS);
-  check('Verify, right password, other rhythm: rejected on rhythm', /Rejected: right password/.test(await page.textContent('#status')), await page.textContent('#status'));
+  check('Verify, right password, other rhythm: rejected with a funny line', await page.evaluate(() => KeyPrint.notYou().includes(document.getElementById('status').textContent) && document.getElementById('status').classList.contains('bad')), await page.textContent('#status'));
   check('"Is it really you?" still offered after a rhythm reject', await page.isVisible('#recover-open'));
   await page.click('#recover-open');
   check('shows your own question', (await page.textContent('#recover-q')) === Q && await page.evaluate(() => document.activeElement.id === 'recover-a'));

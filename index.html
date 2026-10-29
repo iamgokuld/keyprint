@@ -436,7 +436,7 @@ h2{font-size:12px;letter-spacing:.14em}
           </tbody>
         </table>
       </div>
-      <p>These are the same messages you see on the Try it tab after a verify.</p>
+      <p>The Try it tab keeps it short: an accepted try just says <strong>It is you.</strong>, and a rejected one gets a cheeky line instead of the vote count.</p>
     </section>
 
     <div class="how-notes">
@@ -1214,12 +1214,20 @@ if (typeof module !== 'undefined') module.exports = KPT;
   function train() { state.trained = state.samples.length >= 3 ? KP.trainAll(state.samples) : null; }
 
   // ---------- verify: 2 of 3 detectors must accept; "Is it really you?" (the security question) is offered until a try is accepted ----------
+  // right password, wrong rhythm: one of these, picked at random
+  var NOT_YOU = [
+    'Nice try. You know the password, but your fingers just snitched on you.',
+    'Right password, wrong fingers. Who are you, and what did you do with the owner?',
+    'The password is correct. The vibes are not.',
+    'Those keys were pressed by a stranger. The keyboard never forgets a rhythm.',
+    'You typed it perfectly. Too bad perfectly like someone else.'
+  ];
   function onVerify(x) {
     if (!state.trained) { setStatus('Train a profile first.', 'bad'); return; }
     var accepts = KP.DETECTORS.filter(function (d) {
       return d.score(state.trained[d.id].model, x) <= KP.thresholdAt(state.trained[d.id].loo, state.frr);
     }).length, ok = accepts >= 2;
-    setStatus(ok ? 'Accepted: ' + accepts + ' of 3 detectors say it is you.' : 'Rejected: right password, but only ' + accepts + ' of 3 detectors say it is you.', ok ? 'ok' : 'bad');
+    setStatus(ok ? 'It is you.' : NOT_YOU[Math.floor(Math.random() * NOT_YOU.length)], ok ? 'ok' : 'bad');
     if (ok) $('recover-row').hidden = true;
   }
 
@@ -1408,7 +1416,7 @@ if (typeof module !== 'undefined') module.exports = KPT;
   window.KeyPrint = {
     lastVector: function () { return state.lastX && state.lastX.slice(); }, device: function () { return state.device; },
     keypad: function () { return keypadOn; }, samples: function () { return state.samples.length; }, trained: function () { return !!state.trained; },
-    hasAccount: function () { return !!account; }, busy: function () { return checking; },
+    hasAccount: function () { return !!account; }, busy: function () { return checking; }, notYou: function () { return NOT_YOU.slice(); },
     featureNames: function () { var n = dim(); return n ? (state.device === 'mobile' ? KPT.featureNames((n + 2) / 5) : KPF.names((n + 2) / 3)) : []; }
   };
 
