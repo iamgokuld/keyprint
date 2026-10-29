@@ -227,6 +227,14 @@ button,a,label,summary,select,input{touch-action:manipulation}
 .switch input:checked::after{transform:translateX(16px)}
 .switch small{display:block;font-weight:400;color:var(--muted);font-size:12px}
 .badge.warn{background:var(--bad-soft);color:var(--bad)}
+.ppbar{justify-content:space-between;gap:8px 12px}
+.ppbar .seg .mono{font-weight:500;opacity:.85}
+.pp{white-space:pre}
+#pp-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+#pp-form[hidden]{display:none}
+#pp-form .hint{grid-column:1/-1;margin:0}
+#pp-input{font-family:var(--font-mono);font-size:16px;width:100%;min-width:0;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+@media (max-width:520px){#pp-form{grid-template-columns:minmax(0,1fr)}}
 .testing{border-color:var(--bad);background:var(--bad-soft)}
 /* on-screen keypad: no selection, no callout, no double-tap zoom, no scroll stealing the pointer */
 .keypad{display:grid;gap:8px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--bg);
@@ -239,6 +247,7 @@ button,a,label,summary,select,input{touch-action:manipulation}
   box-shadow:0 1px 0 var(--line);transition:background .06s,transform .06s}
 .kp-key.down{background:var(--accent);color:var(--surface);border-color:var(--accent);transform:translateY(1px)}
 .kp-key.ret{font-size:16px;letter-spacing:.06em}
+.kp-key.sp{font-size:15px;letter-spacing:.04em}
 .kp-key .tap{position:absolute;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--bad);opacity:.85;pointer-events:none}
 @media (orientation:landscape) and (max-height:500px){.kp-key{min-height:44px;font-size:18px}.keypad{max-width:640px;gap:6px;padding:8px}.keypad .kr{gap:6px}}
 </style>
@@ -251,7 +260,7 @@ button,a,label,summary,select,input{touch-action:manipulation}
   <header>
     <div class="brand">
       <h1>KeyPrint</h1>
-      <p class="tagline"><strong>Your password is public; your rhythm isn’t.</strong> Type <span class="mono">.tie5Roanl</span> ten times so the page learns how you type it, then let a friend try the same password and watch it get rejected.</p>
+      <p class="tagline"><strong>Your password is public; your rhythm isn’t.</strong> Type <span class="mono pp">.tie5Roanl</span> ten times so the page learns how you type it, then let a friend try the same password and watch it get rejected.</p>
     </div>
     <div class="tabs" role="tablist" aria-label="Sections">
       <button role="tab" id="tab-try" aria-selected="true" aria-controls="view-try" tabindex="0">Try it</button>
@@ -277,9 +286,22 @@ button,a,label,summary,select,input{touch-action:manipulation}
       <label class="switch"><input type="checkbox" id="force-keypad" role="switch" aria-describedby="mode-note"><span>On-screen keypad<small id="mode-sub">Uses your mobile profile</small></span></label>
       <span class="badge" id="mode-badge">Desktop profile · keyboard</span>
     </div>
+    <div class="row ppbar">
+      <h2 id="pp-h">Passphrase</h2>
+      <div class="seg" role="group" aria-labelledby="pp-h">
+        <button type="button" id="pp-default" aria-pressed="true">Default <span class="mono">.tie5Roanl</span></button>
+        <button type="button" id="pp-custom" aria-pressed="false">Custom</button>
+      </div>
+    </div>
+    <form id="pp-form" hidden>
+      <label for="pp-input" class="sr-only">Your own passphrase</label>
+      <input id="pp-input" type="text" maxlength="32" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="create your own passphrase">
+      <button class="btn primary" id="pp-save" type="submit">Use this passphrase</button>
+      <p class="hint status" id="pp-msg" aria-live="polite">4–32 characters: letters, digits, spaces and ASCII symbols. It gets its own profile, separate from the default one.</p>
+    </form>
     <p class="banner testing" id="mode-note" hidden><span><strong>Testing mode:</strong> keypad forced on a device without a touch screen. Mouse clicks are not finger taps, so this only checks the plumbing; enroll on a phone for real numbers.</span></p>
     <div class="banner" id="friend-banner" hidden>
-      <p><strong>Friend’s turn.</strong> Hand over the <span class="dev-word">keyboard</span>. They type <span class="mono">.tie5Roanl</span> then Return; the password is no secret, only your rhythm is. Every attempt counts as “Someone else”.</p>
+      <p><strong>Friend’s turn.</strong> Hand over the <span class="dev-word">keyboard</span>. They type <span class="mono pp">.tie5Roanl</span> then Return; the password is no secret, only your rhythm is. Every attempt counts as “Someone else”.</p>
       <button class="btn" id="friend-done">Back to me</button>
     </div>
     <div class="keys" id="keys" aria-hidden="true"></div>
@@ -293,7 +315,7 @@ button,a,label,summary,select,input{touch-action:manipulation}
         <div class="scroll"><svg id="timeline" width="100%" height="150" role="img" aria-label="Key hold timeline for the last attempt"></svg></div>
       </figure>
       <figure>
-        <figcaption>Rhythm vs your profile · 31 features</figcaption>
+        <figcaption>Rhythm vs your profile · <span id="rhythm-n">31</span> features</figcaption>
         <div class="scroll"><svg id="rhythm" width="100%" height="190" role="img" aria-label="Each timing feature of the last attempt against your profile mean plus or minus one standard deviation"></svg></div>
         <p class="hint"><span class="swatch" style="background:var(--accent)"></span>this attempt · <span class="swatch" style="background:var(--muted);opacity:.35"></span>your mean ± 1 SD · <span class="swatch" style="background:var(--bad)"></span>beyond 2 SD. Grouped by key: hold, press→press, release→press.</p>
       </figure>
@@ -743,6 +765,75 @@ if (typeof module !== 'undefined') module.exports = KP;
 // ==== KP-DETECTORS END ====
 </script>
 
+<script id="kp-passphrase">
+// ==== KP-PASSPHRASE BEGIN ==== (pure: custom passphrases; needs KP, whose block stays frozen; also loaded by test_passphrase.js)
+var KPP = (function () {
+  'use strict';
+  var DEFAULT = KP.PASSPHRASE, MIN_LEN = 4, MAX_LEN = 32;
+  // KP's layout arrays are rewritten in place below, so keep the CMU layout for the benchmark
+  KP.CMU_FEATURE_NAMES = KP.FEATURE_NAMES.slice();
+  var DIGITS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+  var PUNCT = {
+    ' ': 'space', '.': 'period', ',': 'comma', '-': 'minus', '_': 'underscore', '=': 'equal', '+': 'plus', '!': 'exclam',
+    '@': 'at', '#': 'hash', '$': 'dollar', '%': 'percent', '^': 'caret', '&': 'amp', '*': 'star', '(': 'lparen', ')': 'rparen',
+    '[': 'lbracket', ']': 'rbracket', '{': 'lbrace', '}': 'rbrace', ';': 'semicolon', ':': 'colon', "'": 'quote', '"': 'dquote',
+    '/': 'slash', '\\': 'backslash', '|': 'bar', '?': 'question', '<': 'less', '>': 'greater', '`': 'grave', '~': 'tilde'
+  };
+  /** Feature-name token for one character, CMU style: "period", "five", "Shift.r". */
+  function keyName(c) {
+    if (/[0-9]/.test(c)) return DIGITS[+c];
+    if (/[A-Z]/.test(c)) return 'Shift.' + c.toLowerCase();
+    return PUNCT[c] || c;
+  }
+  /** null if p can be a passphrase (printable ASCII, one key press per character), else why not. */
+  function check(p) {
+    if (typeof p !== 'string' || p.length < MIN_LEN) return 'Use at least ' + MIN_LEN + ' characters.';
+    if (p.length > MAX_LEN) return 'Use at most ' + MAX_LEN + ' characters.';
+    var bad = p.split('').filter(function (c) { return c < ' ' || c > '~'; })[0];
+    if (bad) return '“' + bad + '” is not a plain keyboard character; use letters, digits, spaces and ASCII symbols.';
+    return null;
+  }
+  /** Point KP at passphrase p (the default when empty): key names, expected keys, CMU-order feature names, DIM. */
+  function configure(p) {
+    p = p || DEFAULT;
+    var err = check(p); if (err) throw new Error(err);
+    var chars = p.split('');
+    KP.KEY_NAMES.length = 0; KP.KEY_NAMES.push.apply(KP.KEY_NAMES, chars.map(keyName).concat('Return'));
+    KP.EXPECTED_KEYS.length = 0; KP.EXPECTED_KEYS.push.apply(KP.EXPECTED_KEYS, chars.concat('Enter'));
+    var f = [], k = KP.KEY_NAMES;
+    for (var i = 0; i < k.length; i++) {
+      f.push('H.' + k[i]);
+      if (i < k.length - 1) f.push('DD.' + k[i] + '.' + k[i + 1], 'UD.' + k[i] + '.' + k[i + 1]);
+    }
+    KP.FEATURE_NAMES.length = 0; KP.FEATURE_NAMES.push.apply(KP.FEATURE_NAMES, f);
+    KP.PASSPHRASE = p; KP.DIM = f.length;
+  }
+  /** Run fn with KP on the default passphrase (KP's synthetic self-test is built for its 11 keys). */
+  function withDefault(fn) {
+    var p = KP.PASSPHRASE; configure(DEFAULT);
+    try { return fn(); } finally { configure(p); }
+  }
+  /** n synthetic enrollment samples for the active passphrase, same typist model as KP's 11-key one. */
+  function syntheticSamples(seed, n) {
+    var r = KP.rng(seed), g = KP.gaussian(r), nk = KP.KEY_NAMES.length, hold = [], dd = [], S = [], i;
+    for (i = 0; i < nk; i++) hold.push(0.06 + 0.07 * r());
+    for (i = 0; i < nk - 1; i++) dd.push(0.12 + 0.25 * r());
+    for (var s = 0; s < n; s++) {
+      var ks = [], down = 0;
+      for (i = 0; i < nk; i++) {
+        if (i > 0) down += Math.max(0.02, dd[i - 1] * (1 + 0.12 * g()));
+        ks.push({ down: down, up: down + Math.max(0.015, hold[i] * (1 + 0.12 * g())) });
+      }
+      S.push(KP.featuresFromKeystrokes(ks));
+    }
+    return S;
+  }
+  return { DEFAULT: DEFAULT, MIN_LEN: MIN_LEN, MAX_LEN: MAX_LEN, keyName: keyName, check: check, configure: configure, withDefault: withDefault, syntheticSamples: syntheticSamples };
+})();
+if (typeof module !== 'undefined') module.exports = KPP;
+// ==== KP-PASSPHRASE END ====
+</script>
+
 <script id="kp-capture">
 // ==== KP-CAPTURE BEGIN ==== (pure: capture state machine, M1 import, rhythm stats; needs KP; also loaded by test_capture.js)
 var KPC = (function () {
@@ -838,13 +929,25 @@ if (typeof module !== 'undefined') module.exports = KPC;
 // ==== KP-TOUCH BEGIN ==== (pure: keypad tap capture, 31 timing + 22 position features, synthetic volunteers; needs KP; also loaded by test_touch.js and bench-mobile.js)
 var KPT = (function () {
   'use strict';
-  // On-screen keypad: only the keys of .tie5Roanl + Return, in rough QWERTY order, 5 per row so keys stay ≥ 44 px on a 360 px phone.
-  var KEYPAD_ROWS = [['5', 'e', 't', 'i', 'o'], ['a', 'n', 'l', 'R', '.'], ['Enter']];
-  var TIMING_DIM = KP.DIM;   // 31
-  var POS_NAMES = [];
-  KP.KEY_NAMES.forEach(function (k) { POS_NAMES.push('X.' + k, 'Y.' + k); });
-  var FEATURE_NAMES = KP.FEATURE_NAMES.concat(POS_NAMES);   // 31 timing (CMU order) + 22 position = 53
-  var DIM = FEATURE_NAMES.length;
+  // On-screen keypad: only the keys of the passphrase + Return, 5 per row so keys stay ≥ 44 px on a 360 px phone (default: rough QWERTY order).
+  var DEFAULT_ROWS = [['5', 'e', 't', 'i', 'o'], ['a', 'n', 'l', 'R', '.'], ['Enter']];
+  var KEYPAD_ROWS = [], POS_NAMES = [], FEATURE_NAMES = [], TIMING_DIM, DIM;
+  /** Rebuild the keypad and feature layout from KP's active passphrase (call after KP.configure). Arrays change in place. */
+  function configure() {
+    var rows = DEFAULT_ROWS;
+    if (typeof KPP !== 'undefined' && KP.PASSPHRASE !== KPP.DEFAULT) {
+      // a custom passphrase's distinct keys, sorted so the keypad does not spell out the order
+      var keys = KP.EXPECTED_KEYS.slice(0, -1).filter(function (k, i, a) { return a.indexOf(k) === i; }).sort();
+      rows = [];
+      for (var i = 0; i < keys.length; i += 5) rows.push(keys.slice(i, i + 5));
+      rows.push(['Enter']);
+    }
+    KEYPAD_ROWS.length = 0; KEYPAD_ROWS.push.apply(KEYPAD_ROWS, rows);
+    POS_NAMES.length = 0; KP.KEY_NAMES.forEach(function (k) { POS_NAMES.push('X.' + k, 'Y.' + k); });
+    FEATURE_NAMES.length = 0; FEATURE_NAMES.push.apply(FEATURE_NAMES, KP.FEATURE_NAMES.concat(POS_NAMES));   // default: 31 timing (CMU order) + 22 position = 53
+    TIMING_DIM = api.TIMING_DIM = KP.DIM; DIM = api.DIM = FEATURE_NAMES.length;
+    return api;
+  }
 
   /** Tap offset from the key centre, normalised to key size: −0.5 … +0.5 inside the key (x right, y down). */
   function offset(clientX, clientY, rect) {
@@ -861,7 +964,7 @@ var KPT = (function () {
 
   /**
    * Tap capture, same rules as the keyboard: clock = e.timeStamp; taps before "." are ignored; a wrong key spoils the
-   * attempt and counts a reject; taps after all 11 keys are down are ignored. Taps may overlap (multi-touch): each
+   * attempt and counts a reject; taps after all keys are down are ignored. Taps may overlap (multi-touch): each
    * pointerup is matched to its pointerdown by pointerId. interrupt() (pointercancel, page hidden) spoils a started attempt.
    * down({key, id, timeStamp, dx, dy}) / up({id, timeStamp}) return {type: ignore|stray|start|key|spoil|release|complete, ...}.
    */
@@ -916,16 +1019,16 @@ var KPT = (function () {
     opts = opts || {};
     var seed = opts.seed || 1, nUsers = opts.users || 20, nReps = opts.reps || 20;
     var posSignal = opts.posSignal == null ? 0.06 : opts.posSignal, timeSignal = opts.timeSignal == null ? 0.12 : opts.timeSignal;
-    var r = KP.rng(seed), g = KP.gaussian(r), users = [];
+    var r = KP.rng(seed), g = KP.gaussian(r), users = [], nKeys = KP.KEY_NAMES.length;
     for (var u = 0; u < nUsers; u++) {
       var hold = [], dd = [], bias = [], noise = 0.07 + 0.06 * r(), k;
-      for (k = 0; k < 11; k++) hold.push(0.095 * Math.exp(timeSignal * g()));
-      for (k = 0; k < 10; k++) dd.push(0.26 * Math.exp(timeSignal * g()));
-      for (k = 0; k < 11; k++) bias.push([posSignal * g(), 0.08 + posSignal * g()]);
+      for (k = 0; k < nKeys; k++) hold.push(0.095 * Math.exp(timeSignal * g()));
+      for (k = 0; k < nKeys - 1; k++) dd.push(0.26 * Math.exp(timeSignal * g()));
+      for (k = 0; k < nKeys; k++) bias.push([posSignal * g(), 0.08 + posSignal * g()]);
       var reps = [];
       for (var i = 0; i < nReps; i++) {
         var ks = [], t = 0, tempo = Math.exp(0.08 * g());
-        for (k = 0; k < 11; k++) {
+        for (k = 0; k < nKeys; k++) {
           if (k) t += Math.max(0.03, dd[k - 1] * tempo * (1 + 0.15 * g()));
           var h = Math.max(0.02, hold[k] * tempo * (1 + 0.15 * g()));
           ks.push({ down: t, up: t + h, dx: bias[k][0] + noise * g(), dy: bias[k][1] + noise * g() });
@@ -937,10 +1040,11 @@ var KPT = (function () {
     return users;
   }
 
-  return {
-    KEYPAD_ROWS: KEYPAD_ROWS, TIMING_DIM: TIMING_DIM, POS_NAMES: POS_NAMES, FEATURE_NAMES: FEATURE_NAMES, DIM: DIM,
+  var api = {
+    KEYPAD_ROWS: KEYPAD_ROWS, TIMING_DIM: TIMING_DIM, POS_NAMES: POS_NAMES, FEATURE_NAMES: FEATURE_NAMES, DIM: DIM, configure: configure,
     offset: offset, features: features, timingOnly: timingOnly, createTapCapture: createTapCapture, syntheticVolunteers: syntheticVolunteers
   };
+  return configure();
 })();
 if (typeof module !== 'undefined') module.exports = KPT;
 // ==== KP-TOUCH END ====
@@ -950,12 +1054,20 @@ if (typeof module !== 'undefined') module.exports = KPT;
 (function () {
   'use strict';
   var N_ENROLL = 10;
-  // Desktop and phone profiles live under separate keys and are never scored against each other.
-  var STORE = { desktop: 'keyprint.profile.v2', mobile: 'keyprint.profile.mobile.v1' }, KEYPAD_PREF = 'keyprint.keypad';
+  // ---------- passphrase: the CMU default, or the visitor's own (kept in this browser, with its own profiles) ----------
+  var PP_MODE = 'keyprint.passphrase.mode', PP_CUSTOM = 'keyprint.passphrase.custom', ppCustom = null, custom = false;
+  try { ppCustom = localStorage.getItem(PP_CUSTOM); custom = localStorage.getItem(PP_MODE) === 'custom' && !!ppCustom && !KPP.check(ppCustom); } catch (e) { }
+  if (custom) { KPP.configure(ppCustom); KPT.configure(); }
+  // Desktop and phone profiles live under separate keys and are never scored against each other; so do default and custom.
+  var DEFAULT_STORE = { desktop: 'keyprint.profile.v2', mobile: 'keyprint.profile.mobile.v1' };
+  var CUSTOM_STORE = { desktop: 'keyprint.profile.v2.custom', mobile: 'keyprint.profile.mobile.v1.custom' };
+  var STORE = custom ? CUSTOM_STORE : DEFAULT_STORE, KEYPAD_PREF = 'keyprint.keypad';
   var $ = function (id) { return document.getElementById(id); };
-  var LABEL = { period: '.', five: '5', 'Shift.r': 'R', Return: '⏎' };
+  var LABEL = { Return: '⏎', space: '␣' };
+  KP.KEY_NAMES.forEach(function (k, i) { if (!LABEL[k]) LABEL[k] = KP.EXPECTED_KEYS[i]; });   // period -> ".", Shift.r -> "R"
   var lab = function (k) { return LABEL[k] || k; };
-  var keyName = function (k) { return k === 'Enter' ? 'Return' : k; };
+  var keyName = function (k) { return k === 'Enter' ? 'Return' : k === ' ' ? 'Space' : k; };
+  var FIRST = '“' + keyName(KP.EXPECTED_KEYS[0]) + '”';
 
   var state = { device: 'desktop', step: 'enroll', samples: [], frr: 0.05, trained: null, history: [], lastX: null, lastKs: null };
   var dim = function () { return state.device === 'mobile' ? KPT.DIM : KP.DIM; };
@@ -979,9 +1091,9 @@ if (typeof module !== 'undefined') module.exports = KPT;
       var r = document.createElement('div'); r.className = 'kr' + (row[0] === 'Enter' ? ' ret' : '');
       row.forEach(function (k) {
         var b = document.createElement('button');
-        b.type = 'button'; b.tabIndex = -1; b.className = 'kp-key' + (k === 'Enter' ? ' ret' : ''); b.dataset.k = k;
-        b.setAttribute('aria-label', k === 'Enter' ? 'Return' : k === '.' ? 'period' : k === 'R' ? 'capital R' : k);
-        b.appendChild(document.createTextNode(k === 'Enter' ? 'Return ⏎' : k));
+        b.type = 'button'; b.tabIndex = -1; b.className = 'kp-key' + (k === 'Enter' ? ' ret' : k === ' ' ? ' sp' : ''); b.dataset.k = k;
+        b.setAttribute('aria-label', k === 'Enter' ? 'Return' : k === '.' ? 'period' : k === ' ' ? 'space' : /[A-Z]/.test(k) ? 'capital ' + k : k);
+        b.appendChild(document.createTextNode(k === 'Enter' ? 'Return ⏎' : k === ' ' ? 'space' : k));
         keyEls[k] = b; r.appendChild(b);
       });
       o.keypad.appendChild(r);
@@ -991,7 +1103,7 @@ if (typeof module !== 'undefined') module.exports = KPT;
     function paint() {
       var ks = cur().attempt();
       for (var i = 0; i < strip.length; i++) {
-        var cls = 'key' + (i === 10 ? ' wide' : '');
+        var cls = 'key' + (i === strip.length - 1 ? ' wide' : '');
         if (!ks && errPos === i) cls += ' err';
         else if (ks && ks[i]) cls += ks[i].up == null ? ' down' : ' done';
         strip[i].className = cls;
@@ -1012,11 +1124,11 @@ if (typeof module !== 'undefined') module.exports = KPT;
         : r.reason === 'cancel' ? 'Touch cancelled (the finger slid off or the browser took over)' : r.reason === 'hidden' ? 'Page was hidden'
         : 'Wrong key: expected “' + keyName(r.want) + '” at position ' + (r.pos + 1) + ', got “' + keyName(r.got) + '”';
       o.rejects(total());
-      o.status(why + '. Attempt discarded (' + total() + ' this session); start again with “.”', 'bad');
+      o.status(why + '. Attempt discarded (' + total() + ' this session); start again with ' + FIRST, 'bad');
     }
     function handle(r) {
-      if (r.type === 'restart') { errPos = null; o.input.value = ''; o.status('Restarted. Start with “.”'); }
-      else if (r.type === 'stray') o.status('Start with “.” (ignored “' + keyName(r.key) + '”).');
+      if (r.type === 'restart') { errPos = null; o.input.value = ''; o.status('Restarted. Start with ' + FIRST); }
+      else if (r.type === 'stray') o.status('Start with ' + FIRST + ' (ignored “' + keyName(r.key) + '”).');
       else if (r.type === 'start' || r.type === 'key') {
         if (r.type === 'start') { errPos = null; clearTaps(); if (o.onStart) o.onStart(); }
         if (!keypadOn) o.input.value = '•'.repeat(r.n);
@@ -1267,7 +1379,7 @@ if (typeof module !== 'undefined') module.exports = KPT;
     $('step-enroll').classList.toggle('done', n >= N_ENROLL);
     $('progress').innerHTML = Array.from({ length: N_ENROLL }, function (_, i) { return '<span class="dot' + (i < n ? ' on' : '') + '"></span>'; }).join('');
     $('en-msg').textContent = n >= N_ENROLL ? 'Enrollment complete. Delete a sample below to re-record it, or Reset to start over.'
-      : 'Type the passphrase ' + (N_ENROLL - n) + ' more time' + (N_ENROLL - n === 1 ? '' : 's') + ' at your natural pace. Each clean attempt becomes a ' + dim() + '-feature sample' + (state.device === 'mobile' ? ' (31 timings + 22 tap positions)' : '') + '. Training runs after the 10th.';
+      : 'Type the passphrase ' + (N_ENROLL - n) + ' more time' + (N_ENROLL - n === 1 ? '' : 's') + ' at your natural pace. Each clean attempt becomes a ' + dim() + '-feature sample' + (state.device === 'mobile' ? ' (' + KP.DIM + ' timings + ' + (KPT.DIM - KP.DIM) + ' tap positions)' : '') + '. Training runs after the 10th.';
     $('samples').innerHTML = state.samples.map(function (x, i) {
       var total = x.slice(0, KP.DIM).reduce(function (s, v, j) { return KP.FEATURE_NAMES[j].indexOf('DD.') === 0 ? s + v : s; }, 0);
       var loo = state.trained ? ' · LOO ' + state.trained.manhattan.loo[i].toFixed(1) : '';
@@ -1359,7 +1471,8 @@ if (typeof module !== 'undefined') module.exports = KPT;
   $('import-text').addEventListener('click', function () { importText($('json-box').value); });
   $('load-example').addEventListener('click', function () {
     var seed = Date.now() % 100000;
-    var S = state.device === 'mobile' ? KPT.syntheticVolunteers({ seed: seed, users: 1, reps: N_ENROLL })[0].reps : KP.syntheticProfileSamples(seed, N_ENROLL);
+    var S = state.device === 'mobile' ? KPT.syntheticVolunteers({ seed: seed, users: 1, reps: N_ENROLL })[0].reps
+      : custom ? KPP.syntheticSamples(seed, N_ENROLL) : KP.syntheticProfileSamples(seed, N_ENROLL);
     loadProfile({ app: 'KeyPrint', device: state.device, samples: S, frr: state.frr });
     save(); render(); drawRhythm(); prStatus('Loaded a synthetic ' + (state.device === 'mobile' ? 'phone ' : '') + 'typist. Your real typing will almost certainly be rejected by it.', 'ok');
   });
@@ -1406,7 +1519,7 @@ if (typeof module !== 'undefined') module.exports = KPT;
 
   // ---------- self-test ----------
   function runTest() {
-    var seed = 1 + Math.floor(Math.random() * 1e6), out = KP.runSyntheticTests({ seed: seed });
+    var seed = 1 + Math.floor(Math.random() * 1e6), out = KPP.withDefault(function () { return KP.runSyntheticTests({ seed: seed }); });
     $('test-out').innerHTML = '<table><thead><tr><th>Detector</th><th class="num">Genuine</th><th class="num">Impostor</th><th class="num">FRR</th><th class="num">Caught</th><th></th></tr></thead><tbody>' +
       out.results.map(function (r) {
         return '<tr><td>' + r.name + '</td><td class="num">' + r.meanGen.toFixed(2) + '</td><td class="num">' + r.meanImp.toFixed(2) + '</td><td class="num">' +
@@ -1415,13 +1528,13 @@ if (typeof module !== 'undefined') module.exports = KPT;
   }
   $('run-test').addEventListener('click', runTest);
 
-  // ---------- persistence (this browser only; one slot per device type) ----------
-  function save() { try { localStorage.setItem(STORE[state.device], JSON.stringify({ app: 'KeyPrint', device: state.device, samples: state.samples, frr: state.frr })); } catch (e) { } }
+  // ---------- persistence (this browser only; one slot per device type and passphrase kind) ----------
+  function save() { try { localStorage.setItem(STORE[state.device], JSON.stringify({ app: 'KeyPrint', device: state.device, passphrase: KP.PASSPHRASE, samples: state.samples, frr: state.frr })); } catch (e) { } }
   function restore() {
     try {
       var s = localStorage.getItem(STORE[state.device]);
       if (s) { loadProfile(JSON.parse(s)); return; }
-      var v1 = state.device === 'desktop' && localStorage.getItem('keyprint.v1');   // M1 data on the same origin
+      var v1 = !custom && state.device === 'desktop' && localStorage.getItem('keyprint.v1');   // M1 data on the same origin
       if (v1) { loadProfile(JSON.parse(v1)); save(); }
     } catch (e) { }
   }
@@ -1452,11 +1565,65 @@ if (typeof module !== 'undefined') module.exports = KPT;
       if (document.activeElement && document.activeElement.blur && on && document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'password') document.activeElement.blur();
     }
     tryCap.mode(); paintMode();
-    setStatus(keypadOn ? 'Tap the keys below: “.” first, Return last. A wrong key discards the attempt.' : 'Start with “.”. Backspace or a wrong key discards the attempt; Esc restarts.');
+    setStatus(keypadOn ? 'Tap the keys below: ' + FIRST + ' first, Return last. A wrong key discards the attempt.' : 'Start with ' + FIRST + '. Backspace or a wrong key discards the attempt; Esc restarts.');
   }
   $('force-keypad').addEventListener('change', function (e) { setKeypad(e.target.checked, 'user'); });
 
   function render() { renderProfile(); renderVerdicts(); renderTally(); paintSteps(); }
+
+  // ---------- passphrase picker: switching or changing it reloads the page with the other layout ----------
+  function paintPassphrase(form) {
+    document.querySelectorAll('.pp').forEach(function (e) { e.textContent = KP.PASSPHRASE; });
+    document.querySelector('label[for="pass"]').textContent = 'Passphrase (type ' + KP.PASSPHRASE + ' then Return)';
+    $('pass').placeholder = 'click here and type ' + KP.PASSPHRASE;
+    $('keypad').setAttribute('aria-label', 'On-screen keypad for ' + KP.PASSPHRASE + ' and Return');
+    $('rhythm-n').textContent = KP.DIM;
+    $('pp-default').setAttribute('aria-pressed', String(!form));
+    $('pp-custom').setAttribute('aria-pressed', String(!!form));
+    $('pp-form').hidden = !form;
+    $('pp-save').textContent = custom ? 'Change passphrase' : 'Use this passphrase';
+  }
+  function ppStatus(msg, kind) { var s = $('pp-msg'); s.textContent = msg; s.className = 'hint status' + (kind ? ' ' + kind : ''); }
+  function hasCustomProfile() {
+    return ['desktop', 'mobile'].some(function (d) {
+      try { var o = JSON.parse(localStorage.getItem(CUSTOM_STORE[d])); return !!(o && o.samples && o.samples.length); } catch (e) { return false; }
+    });
+  }
+  function usePassphrase(mode, p) {
+    try {
+      if (p != null) localStorage.setItem(PP_CUSTOM, p);
+      localStorage.setItem(PP_MODE, mode);
+    } catch (e) { ppStatus('This browser blocks storage, so a custom passphrase cannot be kept.', 'bad'); return; }
+    location.reload();
+  }
+  $('pp-default').addEventListener('click', function () {
+    if (custom) usePassphrase('default');
+    else { paintPassphrase(false); ppDisarm(); }
+  });
+  $('pp-custom').addEventListener('click', function () {
+    if (custom) return;
+    if (ppCustom && !KPP.check(ppCustom)) { usePassphrase('custom'); return; }   // back to the one set before
+    paintPassphrase(true); $('pp-input').focus();
+  });
+  var ppTimer = null;
+  function ppDisarm() { clearTimeout(ppTimer); $('pp-save').classList.remove('danger', 'armed'); $('pp-save').classList.add('primary'); paintPassphrase(!$('pp-form').hidden); }
+  $('pp-input').addEventListener('input', function () { if ($('pp-save').classList.contains('armed')) ppDisarm(); });
+  $('pp-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var p = $('pp-input').value, b = $('pp-save'), err = KPP.check(p);
+    if (err) { ppStatus(err, 'bad'); return; }
+    if (p === KPP.DEFAULT) { ppStatus('That is the default passphrase; pick Default above.', 'bad'); return; }
+    if (p === ppCustom) { if (custom) ppStatus('Already using this passphrase.', 'ok'); else usePassphrase('custom'); return; }
+    // a new passphrase makes the old custom profile meaningless: ask once, then clear it
+    if (hasCustomProfile() && !b.classList.contains('armed')) {
+      b.classList.remove('primary'); b.classList.add('danger', 'armed'); b.textContent = 'Confirm: delete custom profile';
+      ppStatus('Changing the passphrase deletes the profile trained on “' + ppCustom + '”. Press again to confirm.', 'bad');
+      ppTimer = setTimeout(ppDisarm, 4000); return;
+    }
+    clearTimeout(ppTimer);
+    try { localStorage.removeItem(CUSTOM_STORE.desktop); localStorage.removeItem(CUSTOM_STORE.mobile); } catch (e2) { }
+    usePassphrase('custom', p);
+  });
 
   // ---------- size-dependent SVG charts: redraw when their box width changes ----------
   var pending = 0;
@@ -1475,15 +1642,17 @@ if (typeof module !== 'undefined') module.exports = KPT;
   window.KeyPrint = {
     lastVector: function () { return state.lastX && state.lastX.slice(); }, device: function () { return state.device; },
     keypad: function () { return keypadOn; }, samples: function () { return state.samples.length; }, trained: function () { return !!state.trained; },
-    featureNames: function () { return names().slice(); }
+    featureNames: function () { return names().slice(); }, passphrase: function () { return KP.PASSPHRASE; }
   };
 
   var pref = null; try { pref = localStorage.getItem(KEYPAD_PREF); } catch (e) { }
   keypadOn = pref == null ? coarse : pref === '1';
   state.device = keypadOn ? 'mobile' : 'desktop';
+  if (custom) $('pp-input').value = KP.PASSPHRASE;
+  paintPassphrase(custom);
   restore(); render(); drawTimelineEmpty(); drawRhythm(); runTest();
   tryCap.mode(); paintMode();
-  if (keypadOn) setStatus('Tap the keys below: “.” first, Return last. A wrong key discards the attempt.');
+  setStatus(keypadOn ? 'Tap the keys below: ' + FIRST + ' first, Return last. A wrong key discards the attempt.' : 'Start with ' + FIRST + '. Backspace or a wrong key discards the attempt; Esc restarts.');
 })();
 </script>
 
@@ -1503,20 +1672,22 @@ var KPB = (function () {
   var FA_GRID = [];
   (function () { var i; for (i = 0; i <= 50; i++) FA_GRID.push(i / 100); for (i = 11; i <= 20; i++) FA_GRID.push(i / 20); })();
 
+  // the CMU layout, even while the demo is configured for a custom passphrase (KP-PASSPHRASE keeps a copy)
+  var CMU_NAMES = KP.CMU_FEATURE_NAMES || KP.FEATURE_NAMES;
   /** CSV text -> [{id, reps:[[31 numbers]]}], reps ordered by session then rep. Validates column order. */
   function parseCSV(text) {
     var lines = text.split(/\r?\n/).filter(function (l) { return l.trim().length; });
     var head = lines[0].split(',').map(function (s) { return s.trim(); });
     if (head[0] !== 'subject' || head[1] !== 'sessionIndex' || head[2] !== 'rep') throw new Error('unexpected CSV header: ' + head.slice(0, 3).join(','));
     var feats = head.slice(3);
-    if (feats.length !== KP.DIM || feats.some(function (f, i) { return f !== KP.FEATURE_NAMES[i]; }))
+    if (feats.length !== CMU_NAMES.length || feats.some(function (f, i) { return f !== CMU_NAMES[i]; }))
       throw new Error('feature columns do not match KeyPrint order');
     var by = {}, order = [];
     for (var i = 1; i < lines.length; i++) {
       var c = lines[i].split(','), id = c[0].trim();
       if (!by[id]) { by[id] = []; order.push(id); }
-      var x = new Array(KP.DIM);
-      for (var j = 0; j < KP.DIM; j++) { x[j] = +c[3 + j]; if (!isFinite(x[j])) throw new Error('bad number on line ' + (i + 1)); }
+      var x = new Array(CMU_NAMES.length);
+      for (var j = 0; j < CMU_NAMES.length; j++) { x[j] = +c[3 + j]; if (!isFinite(x[j])) throw new Error('bad number on line ' + (i + 1)); }
       by[id].push({ s: +c[1], r: +c[2], x: x });
     }
     return order.map(function (id) {
