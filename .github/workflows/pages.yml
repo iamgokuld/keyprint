@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: 22
       - name: Test before deploying
-        run: node test_detectors.js && node test_capture.js && node test_touch.js
+        run: node test_detectors.js && node test_capture.js && node test_touch.js && node test_passphrase.js
       - name: Collect site
         run: mkdir _site && cp index.html bench-results.json _site/ && touch _site/.nojekyll
       - uses: actions/configure-pages@v5

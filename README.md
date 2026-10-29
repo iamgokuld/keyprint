@@ -25,6 +25,7 @@ Passwords check what you typed. KeyPrint checks how long you held each key, how 
 ## What you can do
 
 - **Enroll:** type the passphrase `.tie5Roanl` ten times so KeyPrint learns your rhythm.
+- **Use your own passphrase:** switch Passphrase to Custom and create one (4–32 characters: letters, digits, spaces, ASCII symbols). It trains its own profile, separate from the default one, and changing it deletes that profile after you confirm.
 - **Verify:** type it once more and watch three detectors vote on whether it is really you.
 - **Phone mode:** on a phone, an on-screen keypad records where your thumb lands, not just when.
 - **Save profiles:** profiles live in your browser, and you can export them as JSON if you want a backup or a souvenir.
