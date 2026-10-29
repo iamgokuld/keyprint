@@ -1,7 +1,7 @@
 // node test_e2e.js — browser tests with Playwright + Chromium (not part of `npm test`; needs `npm i -D playwright`).
 // Phone (375×667, touch, DPR 2): real touch input via CDP, keypad attempt -> 31 + 22 features, multi-touch, wrong key,
 // enroll + verify, canvas DPR + resize, touch targets, no horizontal overflow.
-// Desktop (1440×900): keyboard attempt -> 31 features, Reset on Try it and How it works, plain How it works walkthrough.
+// Desktop (1440×900): keyboard attempt -> 31 features, Reset on the Enroll step only, passphrase at the bottom, plain How it works walkthrough.
 // Writes docs/screenshots/*.png.
 'use strict';
 const path = require('path');
@@ -166,16 +166,21 @@ async function targets(page, scope) {
   }
   const xd = await page.evaluate(() => KeyPrint.lastVector());
   check('keyboard attempt -> 31 features', xd && xd.length === 31, xd && xd.length);
-  check('Try tab shows only steps, input, message and Reset', await page.evaluate(() => [...document.querySelectorAll('#view-try .stage > *')].filter((el) => el.getBoundingClientRect().height && !el.classList.contains('sr-only')).map((el) => el.id || el.className).join(',') === 'steps,pass,status,stage-foot'));
+  const tryParts = () => page.evaluate(() => [...document.querySelectorAll('#view-try .stage > *')].filter((el) => el.getBoundingClientRect().height && !el.classList.contains('sr-only')).map((el) => el.id || el.className).join(','));
+  check('Enroll shows steps, input, message, Reset, then the passphrase last', (await tryParts()) === 'steps,pass,status,reset-row,phrase');
+  check('passphrase shown at the bottom', (await page.textContent('#phrase')).includes('.tie5Roanl'));
   check('no third step', !(await page.$('#step-friend')));
   // a saved synthetic profile loads as trained
   await page.evaluate(() => localStorage.setItem('keyprint.profile.v2', JSON.stringify({ app: 'KeyPrint', device: 'desktop', samples: KP.syntheticProfileSamples(7, 10), frr: 0.05 })));
   await page.reload(); await sleep(150);
   check('desktop profile trained (synthetic example)', await page.evaluate(() => KeyPrint.trained() && KeyPrint.device() === 'desktop'));
   check('Verify step open once trained', await page.evaluate(() => !document.getElementById('step-verify').disabled));
+  check('Verify hides Reset, passphrase still last', (await tryParts()) === 'steps,pass,status,phrase' && !(await page.isVisible('#reset')));
   await page.screenshot({ path: path.join(SHOTS, 'desktop-1440.png') });
 
-  // Reset on Try it: first click arms, second clears
+  // Reset lives on the Enroll step: first click arms, second clears
+  await page.click('#step-enroll'); await sleep(60);
+  check('Enroll shows Reset', await page.isVisible('#reset'));
   await page.click('#reset');
   check('Reset asks for a second tap', /again/.test(await page.textContent('#reset')) && (await page.evaluate(() => KeyPrint.samples())) === 10);
   await page.click('#reset');
@@ -184,16 +189,15 @@ async function targets(page, scope) {
     JSON.parse(localStorage.getItem('keyprint.profile.v2')).samples.length === 0));
   check('Reset button label restored', (await page.textContent('#reset')).trim() === 'Reset');
 
-  // How it works: plain walkthrough only, plus its own Reset
+  // How it works: plain walkthrough only, no Reset
   await page.click('#tab-how'); await sleep(120);
   check('How it works is a 6-step walkthrough', (await page.$$('#view-how .walk > li')).length === 6);
   check('old session panels are gone', await page.evaluate(() => ['timeline', 'rhythm', 'overall', 'verdicts', 'devs', 'tally', 'force-keypad', 'thr-table', 'test-out', 'export'].every((id) => !document.getElementById(id))));
   await page.screenshot({ path: path.join(SHOTS, 'desktop-1440-how.png'), fullPage: true });
   await page.evaluate(() => localStorage.setItem('keyprint.profile.v2', JSON.stringify({ app: 'KeyPrint', device: 'desktop', samples: KP.syntheticProfileSamples(8, 10), frr: 0.05 })));
   await page.reload(); await sleep(150);
-  check('reload remembers the How it works tab', await page.isVisible('#how-reset'));
-  await page.click('#how-reset'); await page.click('#how-reset'); await sleep(120);
-  check('How it works Reset clears the profile and opens Try it', await page.evaluate(() => KeyPrint.samples() === 0 && !document.getElementById('view-try').hidden));
+  check('reload remembers the How it works tab', await page.isVisible('#view-how .walk'));
+  check('How it works has no Reset', await page.evaluate(() => !document.querySelector('#view-how button.danger') && !document.getElementById('how-reset')));
   check('no JS errors (desktop)', errors.length === 0, errors.join(' | '));
   await ctx.close();
   await browser.close();
