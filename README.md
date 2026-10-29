@@ -25,11 +25,11 @@ Passwords check what you typed. KeyPrint checks how long you held each key, how 
 ## What you can do
 
 - **Enroll:** type the passphrase `.tie5Roanl` ten times so KeyPrint learns your rhythm.
-- **Verify:** type it once more and watch three detectors vote on whether it is really you.
+- **Verify:** type it once more and three detectors vote on whether it is really you. Hand the keyboard to a friend and watch it turn them down.
 - **Phone mode:** on a phone, an on-screen keypad records where your thumb lands, not just when.
 - **Save profiles:** profiles live in your browser, and you can export them as JSON if you want a backup or a souvenir.
 - **Benchmark:** the Benchmark tab runs on the CMU keystroke dataset and draws an ROC curve, an enrollment curve, and per-subject EER numbers.
-- **Pick a theme:** light or dark, whichever suits your late-night typing.
+- **Keep it simple:** the Try it tab is just two steps, the password box and the verdict. Charts, scores and settings live in How it works.
 
 ---
 
