@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>
-/* Layout: Try it (two steps and a password box), Benchmark, How it works (plain walkthrough). */
+/* Layout: Try it (two steps and a password box), Detectors (the three models, worked examples), How it works (plain walkthrough). */
 :root{
   --bg:#f3ede2; --surface:#fdfaf4; --ink:#211b15; --muted:#6e6253; --line:#e3d8c6;
   --accent:#5a2d82; --accent-soft:#ece3f3;
@@ -67,31 +67,10 @@ svg text{fill:var(--muted);font-family:var(--font-mono);font-size:10px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 <style>
-:root{--c1:#5a2d82;--c2:#c2620e;--c3:#17807a;--band:rgba(90,45,130,.08)}
 header .row{gap:12px}
 .tabs{display:inline-flex;gap:2px;border-bottom:1px solid var(--line)}
 .tabs button{border:0;border-bottom:2px solid transparent;background:none;color:var(--muted);font:inherit;font-weight:600;padding:8px 14px;cursor:pointer;margin-bottom:-1px}
 .tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
-#view-bench{display:grid;gap:20px}
-#view-bench[hidden]{display:none!important}
-.bgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
-@media (max-width:880px){.bgrid{grid-template-columns:minmax(0,1fr)}}
-.chart{position:relative;min-width:0}
-.chart canvas{display:block;width:100%}
-.seg.small button{padding:4px 10px;font-size:13px}
-.sel{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
-.badge{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:4px;background:var(--accent-soft);color:var(--accent)}
-.badge.live{background:var(--ok-soft);color:var(--ok)}
-.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px}
-.legend span{display:inline-flex;align-items:center;gap:6px}
-.legend i{display:inline-block;width:14px;height:3px;border-radius:2px}
-.drop{display:grid;gap:4px;place-items:center;text-align:center;padding:22px 16px;border:1.5px dashed var(--line);border-radius:10px;background:var(--bg);cursor:pointer}
-.drop.over{border-color:var(--accent);background:var(--accent-soft)}
-.drop.busy{opacity:.6;pointer-events:none}
-.pbar{height:6px;background:var(--bg);border:1px solid var(--line);border-radius:3px;overflow:hidden}
-.pbar div{height:100%;width:0;background:var(--accent);transition:width .15s}
-.tip{position:fixed;pointer-events:none;z-index:10;background:var(--ink);color:var(--surface);font-family:var(--font-mono);font-size:12px;padding:4px 8px;border-radius:4px;white-space:nowrap}
-td.good{color:var(--ok)} td.worse{color:var(--bad)}
 </style>
 <style>
 /* M4: tabs, guided steps, rhythm chart, How it works, accessibility */
@@ -128,7 +107,6 @@ body{margin:0}
 .how .diagram text{font-family:var(--font-body);font-size:15px}
 footer{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
 footer a{color:var(--accent)}
-.drop:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
 <style>
 /* M5: responsive (360px → wide), touch keypad */
@@ -140,7 +118,6 @@ header{align-items:flex-end}
 .tabs{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tabs button{white-space:nowrap;flex:none}
-.chart canvas{touch-action:pan-y}
 button,a,label,summary,select,input{touch-action:manipulation}
 @media (max-width:520px){
   h1{font-size:24px}
@@ -162,8 +139,7 @@ button,a,label,summary,select,input{touch-action:manipulation}
 @media (max-width:420px){.tab-long{display:none}}
 /* touch targets ≥ 44 px on touch screens and narrow windows */
 @media (pointer:coarse),(max-width:640px){
-  .btn,.tabs button,.seg button,.steps button,.sel,#b-revert{min-height:44px}
-  .seg.small button{min-height:44px;padding:4px 14px}
+  .btn,.tabs button,.seg button,.steps button{min-height:44px}
   .footer-link,footer a{display:inline-flex;align-items:center;min-height:44px}
 }
 /* on-screen keypad: no selection, no callout, no double-tap zoom, no scroll stealing the pointer */
@@ -189,7 +165,7 @@ h1{font-family:var(--font-display);font-size:clamp(40px,7vw,60px);font-weight:60
 h2{font-size:12px;letter-spacing:.14em}
 .tabs button{font-size:15px;font-weight:500}
 .panel{border-radius:14px;padding:22px;box-shadow:0 1px 0 rgba(60,40,10,.04),0 10px 28px -20px rgba(60,40,10,.22)}
-.btn,.seg,.sel{border-radius:999px}
+.btn,.seg{border-radius:999px}
 .btn{padding:7px 16px}
 /* Try tab: two steps, the password box and the message, nothing else */
 .try{justify-items:center;padding:clamp(8px,5vh,56px) 0}
@@ -211,6 +187,7 @@ h2{font-size:12px;letter-spacing:.14em}
 .how{max-width:720px;width:100%;margin:0 auto;display:grid;gap:28px}
 .how h3{margin:0;font-family:var(--font-display);font-size:22px;font-weight:600;letter-spacing:-.015em;line-height:1.25;text-wrap:balance;font-variation-settings:"opsz" 72}
 .how p,.how li{margin:0;text-wrap:pretty}
+.how a{color:var(--accent)}
 .how-intro{display:grid;gap:6px}
 .how-intro h2{font-family:var(--font-display);font-size:clamp(30px,5vw,40px);font-weight:600;letter-spacing:-.02em;text-transform:none;color:var(--ink);line-height:1.1}
 .how-intro p{color:var(--muted);font-size:17px}
@@ -225,6 +202,35 @@ h2{font-size:12px;letter-spacing:.14em}
 @media (max-width:520px){.walk>li{padding-left:52px}.walk>li::before{width:36px;height:36px;font-size:17px}.walk>li::after{left:17px;top:38px}}
 @media (max-width:640px){.panel{padding:16px}.try .steps{grid-template-columns:repeat(2,minmax(0,1fr))}.try .steps button small{display:block}#pass{font-size:20px}}
 </style>
+<style>
+/* Detectors: the three models with one small worked example */
+.det{max-width:760px;width:100%;margin:0 auto;display:grid;gap:28px}
+.det h3{margin:0;font-family:var(--font-display);font-size:22px;font-weight:600;letter-spacing:-.015em;line-height:1.25;text-wrap:balance;font-variation-settings:"opsz" 72}
+.det p{margin:0;text-wrap:pretty}
+.det-box{display:grid;gap:12px;padding:20px 22px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.det-list>li{gap:12px}
+.det-table{font-size:14px}
+.det-table th,.det-table td{padding:6px 8px}
+.det-table tbody th{text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink);font-weight:600}
+.det-table td.res{font-weight:600;white-space:normal;min-width:15em}
+.det-table td.res.ok{color:var(--ok)} .det-table td.res.bad{color:var(--bad)}
+.calc{display:grid;gap:8px;padding:14px 16px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.calc .mono{white-space:pre-line;font-size:14px;line-height:1.7}
+.det-scores{font-size:14px;overflow-wrap:anywhere}
+.det .chip{font-size:12px;padding:2px 7px;border-radius:999px;vertical-align:1px}
+.det-fig{margin:0;display:grid;gap:6px}
+.det-fig figcaption{font-size:13.5px;color:var(--muted)}
+.plot{width:100%;max-width:440px;height:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.plot text{font-family:var(--font-mono);font-size:10px;fill:var(--muted)}
+.plot .ax{stroke:var(--line);stroke-width:1}
+.plot .zone{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1;stroke-opacity:.45}
+.plot .pt{fill:var(--accent)}
+.plot .avg{stroke:var(--ink);stroke-width:2}
+.plot .link{stroke:var(--ok);stroke-width:1.5;stroke-dasharray:3 3}
+.plot .try-ok{fill:var(--ok)} .plot .try-bad{fill:var(--bad)}
+.plot .lbl{font-family:var(--font-body);font-size:14px;font-weight:700}
+@media (max-width:520px){.det-box{padding:16px}.calc{padding:12px}}
+</style>
 <!--HEAD-END-->
 <!--ARTIFACT-HEAD-END-->
 </head>
@@ -238,7 +244,7 @@ h2{font-size:12px;letter-spacing:.14em}
     </div>
     <div class="tabs" role="tablist" aria-label="Sections">
       <button role="tab" id="tab-try" aria-selected="true" aria-controls="view-try" tabindex="0">Try it</button>
-      <button role="tab" id="tab-bench" aria-selected="false" aria-controls="view-bench" tabindex="-1">Benchmark</button>
+      <button role="tab" id="tab-detectors" aria-selected="false" aria-controls="view-detectors" tabindex="-1">Detectors</button>
       <button role="tab" id="tab-how" aria-label="How it works" aria-selected="false" aria-controls="view-how" tabindex="-1">How<span class="tab-long"> it works</span></button>
     </div>
   </header>
@@ -261,73 +267,107 @@ h2{font-size:12px;letter-spacing:.14em}
   </section>
   </div><!-- /view-try -->
 
-  <!-- ===================== BENCHMARK ===================== -->
-  <div id="view-bench" class="view" role="tabpanel" aria-labelledby="tab-bench" tabindex="-1" hidden>
-    <section class="panel" aria-labelledby="bs-h">
-      <div class="row" style="justify-content:space-between">
-        <h2 id="bs-h">Equal-error rate vs Killourhy &amp; Maxion (2009)</h2>
-        <span class="badge" id="b-source">precomputed</span>
-      </div>
-      <p class="hint" id="b-protocol"></p>
-      <div class="scroll" id="b-table"></div>
-      <p class="hint">Paper: K. S. Killourhy and R. A. Maxion, “Comparing Anomaly-Detection Algorithms for Keystroke Dynamics,” <i>DSN 2009</i>, pp. 125–134 (values as listed at <span class="mono">cs.cmu.edu/~keystroke</span>). KeyPrint’s Mahalanobis and nearest-neighbor use a shrunk covariance (λ ≥ 0.05), the paper’s use the plain sample covariance.</p>
-    </section>
-
-    <div class="bgrid">
-      <section class="panel" aria-labelledby="roc-h">
-        <div class="row" style="justify-content:space-between">
-          <h2 id="roc-h">ROC curves</h2>
-          <div class="row">
-            <label class="hint" for="b-subject">Subject</label>
-            <select id="b-subject" class="sel"></select>
-            <div class="seg small" role="group" aria-label="ROC zoom">
-              <button id="roc-full" aria-pressed="false">Full</button>
-              <button id="roc-zoom" aria-pressed="true">FAR ≤ 0.3</button>
-            </div>
-          </div>
-        </div>
-        <div class="legend" id="b-legend"></div>
-        <div class="chart"><canvas id="c-roc" height="340" role="img" aria-label="ROC curves: hit rate against false-alarm rate per detector"></canvas></div>
-        <p class="hint" id="roc-note">Mean over 51 subjects of the best hit rate at each false-alarm budget. The dashed diagonal is FAR = FRR; each curve crosses it near its EER.</p>
-      </section>
-
-      <section class="panel" aria-labelledby="en-c-h">
-        <div class="row" style="justify-content:space-between">
-          <h2 id="en-c-h">Enrollment size</h2>
-          <div class="seg small" role="group" aria-label="Enrollment metric">
-            <button id="en-eer" aria-pressed="true">EER</button>
-            <button id="en-frr" aria-pressed="false">FRR at 5% target</button>
-          </div>
-        </div>
-        <div class="chart"><canvas id="c-enroll" height="340" role="img" aria-label="Mean EER against number of training repetitions"></canvas></div>
-        <p class="hint" id="en-note"></p>
-      </section>
+  <!-- ===================== DETECTORS ===================== -->
+  <div id="view-detectors" class="view det" role="tabpanel" aria-labelledby="tab-detectors" tabindex="-1" hidden>
+    <div class="how-intro">
+      <h2>Detectors</h2>
+      <p>When you verify, three detectors each compare your new try with your 10 enrollment tries and answer yes or no. Here is how each one thinks, worked through with a tiny example.</p>
     </div>
 
-    <section class="panel" aria-labelledby="sp-h">
-      <div class="row" style="justify-content:space-between">
-        <h2 id="sp-h">Per-subject EER spread (200 training reps)</h2>
-        <span class="hint">Hover a dot for the subject; click to show its ROC.</span>
+    <section class="det-box" aria-labelledby="det-ex-h">
+      <h3 id="det-ex-h">The example</h3>
+      <p>The real page measures 31 timings per try. To keep the sums small, this example uses only two: how long you hold <span class="mono">t</span>, and the gap from letting go of <span class="mono">t</span> to pressing <span class="mono">i</span>. Here are your 10 enrollment tries, in milliseconds:</p>
+      <div class="scroll">
+        <table class="det-table" id="det-tries">
+          <thead><tr><th scope="col">Try</th><th class="num" scope="col">1</th><th class="num" scope="col">2</th><th class="num" scope="col">3</th><th class="num" scope="col">4</th><th class="num" scope="col">5</th><th class="num" scope="col">6</th><th class="num" scope="col">7</th><th class="num" scope="col">8</th><th class="num" scope="col">9</th><th class="num" scope="col">10</th><th class="num" scope="col">Average</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Hold t</th><td class="num">100</td><td class="num">112</td><td class="num">88</td><td class="num">106</td><td class="num">94</td><td class="num">104</td><td class="num">96</td><td class="num">108</td><td class="num">92</td><td class="num">100</td><td class="num"><b>100</b></td></tr>
+            <tr><th scope="row">Gap t→i</th><td class="num">200</td><td class="num">218</td><td class="num">184</td><td class="num">208</td><td class="num">192</td><td class="num">206</td><td class="num">196</td><td class="num">214</td><td class="num">186</td><td class="num">196</td><td class="num"><b>200</b></td></tr>
+          </tbody>
+        </table>
       </div>
-      <div class="chart"><canvas id="c-spread" height="210" role="img" aria-label="Per-subject equal-error rates for each detector"></canvas></div>
-      <div class="scroll" id="b-enroll-table"></div>
-      <p class="hint">FRR / FAR @5%: threshold at the 95th percentile of out-of-sample training scores (leave-one-out up to 50 reps, as on the Try it tab; 10-fold above), applied to the held-out genuine and impostor reps.</p>
+      <p>Look at try 2 and try 3. On a slow try you hold <span class="mono">t</span> longer <em>and</em> wait longer before <span class="mono">i</span>. On a fast try, both are shorter. Keep that in mind for detector 2.</p>
     </section>
 
-    <section class="panel" aria-labelledby="live-h">
-      <div class="row" style="justify-content:space-between">
-        <h2 id="live-h">Run live</h2>
-        <button class="btn" id="b-revert" hidden>Show precomputed results</button>
-      </div>
-      <div class="drop" id="b-drop" role="button" tabindex="0" aria-describedby="b-status">
-        <strong>Drop DSL-StrongPasswordData.csv here</strong> or click to choose it.
-        <span class="hint">Runs in a Web Worker in your browser; nothing is uploaded. About 30–90 s.</span>
-      </div>
-      <input type="file" id="b-file" accept=".csv,text/csv" hidden aria-label="CMU benchmark CSV">
-      <div class="pbar" aria-hidden="true"><div id="b-pfill"></div></div>
-      <div class="status" id="b-status" aria-live="polite">Get the CSV from cs.cmu.edu/~keystroke (51 subjects × 400 reps).</div>
+    <ol class="walk det-list">
+      <li>
+        <h3>Scaled Manhattan: how many wobbles away?</h3>
+        <p><strong>The idea.</strong> Your timings are never exactly the same twice. They wobble a little around your average. This detector takes each timing of the new try, sees how far it is from your average, and counts that distance in “your usual wobble”. Then it adds up the counts. A small total means the try looks like you.</p>
+        <p>Your usual wobble is the average distance of your 10 tries from their average: <span class="mono">6 ms</span> for the hold and <span class="mono">9.2 ms</span> for the gap.</p>
+        <div class="calc">
+          <p><strong>New try A:</strong> hold <span class="mono">110</span>, gap <span class="mono">220</span></p>
+          <p class="mono">hold: (110 − 100) ÷ 6 = 1.67<br>gap:  (220 − 200) ÷ 9.2 = 2.17<br>total = <b>3.84</b></p>
+          <p>The line for this detector is <span class="mono">4.73</span>. 3.84 is under it, so: <span class="chip ok">YES</span></p>
+        </div>
+        <div class="calc">
+          <p><strong>New try D:</strong> hold <span class="mono">130</span>, gap <span class="mono">260</span> (someone much slower)</p>
+          <p class="mono">hold: (130 − 100) ÷ 6 = 5.00<br>gap:  (260 − 200) ÷ 9.2 = 6.52<br>total = <b>11.52</b></p>
+          <p>11.52 is over 4.73, so: <span class="chip bad">NO</span></p>
+        </div>
+        <p><strong>Its blind spot.</strong> It looks at each timing on its own. Try B (hold <span class="mono">110</span>, gap <span class="mono">180</span>) also scores exactly 3.84 and gets a YES, even though nobody types like that in your tries.</p>
+      </li>
+      <li>
+        <h3>Mahalanobis: does the pattern fit?</h3>
+        <p><strong>The idea.</strong> This detector also measures distance from your average, but it knows which timings move together. In your tries a longer hold always comes with a longer gap. A try that follows that pattern counts as close. A try that breaks it counts as far, even when each timing alone looks normal.</p>
+        <figure class="det-fig">
+          <svg class="plot" viewBox="0 0 360 244" role="img" aria-labelledby="det-mah-t">
+            <title id="det-mah-t">Your 10 tries form a slanted line of dots. The shaded zone around them is where Mahalanobis says yes. Try A sits inside the zone, try B sits well outside it.</title>
+            <line class="ax" x1="50" y1="200" x2="340" y2="200"/><line class="ax" x1="50" y1="20" x2="50" y2="200"/><text x="114.4" y="216" text-anchor="middle">90</text><text x="178.9" y="216" text-anchor="middle">100</text><text x="243.3" y="216" text-anchor="middle">110</text><text x="307.8" y="216" text-anchor="middle">120</text><text x="42" y="174" text-anchor="end">180</text><text x="42" y="114" text-anchor="end">200</text><text x="42" y="54" text-anchor="end">220</text><text x="195" y="236" text-anchor="middle">hold of t (ms)</text><text x="14" y="110" text-anchor="middle" transform="rotate(-90 14 110)">gap t→i (ms)</text><path class="zone" d="M225.5 110L228 108L230.8 105.7L233.9 103.1L237.6 100.1L241.8 96.3L247 91.7L253.2 85.8L260.6 78.1L269.1 68L276.5 55.9L277.1 44.7L264.7 40.8L243.5 45.5L222.8 53.8L206.7 61.7L194.7 68.2L185.8 73.3L178.9 77.5L173.4 80.9L169 83.8L165.2 86.2L162 88.4L159.2 90.3L156.6 92.1L154.3 93.7L152.2 95.2L150.1 96.6L148.2 98L146.3 99.4L144.5 100.7L142.6 102.1L140.7 103.5L138.8 105L136.8 106.5L134.6 108.2L132.3 110L129.8 112L127 114.3L123.9 116.9L120.2 119.9L115.9 123.7L110.8 128.3L104.6 134.2L97.1 141.9L88.7 152L81.3 164.1L80.7 175.3L93 179.2L114.3 174.5L134.9 166.2L151.1 158.3L163 151.8L172 146.7L178.9 142.5L184.4 139.1L188.8 136.2L192.6 133.8L195.8 131.6L198.6 129.7L201.1 127.9L203.5 126.3L205.6 124.8L207.6 123.4L209.6 122L211.5 120.6L213.3 119.3L215.2 117.9L217.1 116.5L219 115L221 113.5L223.2 111.8Z"/><circle class="pt" cx="178.9" cy="110" r="3.5"/><circle class="pt" cx="256.2" cy="56" r="3.5"/><circle class="pt" cx="101.6" cy="158" r="3.5"/><circle class="pt" cx="217.6" cy="86" r="3.5"/><circle class="pt" cx="140.2" cy="134" r="3.5"/><circle class="pt" cx="204.7" cy="92" r="3.5"/><circle class="pt" cx="153.1" cy="122" r="3.5"/><circle class="pt" cx="230.4" cy="68" r="3.5"/><circle class="pt" cx="127.3" cy="152" r="3.5"/><circle class="pt" cx="178.9" cy="122" r="3.5"/><circle class="try-ok" cx="243.3" cy="50" r="5.5"/><text class="lbl try-ok" x="253.3" y="55" text-anchor="start">A</text><circle class="try-bad" cx="243.3" cy="170" r="5.5"/><text class="lbl try-bad" x="253.3" y="175" text-anchor="start">B</text><path class="avg" d="M173.9 110h10M178.9 105v10"/>
+          </svg>
+          <figcaption>Dots are your 10 tries, + is the average. Inside the shaded zone the score is under the line (<span class="mono">2.03</span>).</figcaption>
+        </figure>
+        <div class="calc">
+          <p><strong>Try A</strong> (110, 220): slower on both, like your slow tries. Score <span class="mono"><b>1.83</b></span>, under 2.03: <span class="chip ok">YES</span></p>
+          <p><strong>Try B</strong> (110, 180): long hold but short gap, which you never do. Score <span class="mono"><b>6.36</b></span>, over 2.03: <span class="chip bad">NO</span></p>
+        </div>
+        <p>Both tries are the same 3.84 wobbles away for detector 1. Only this detector sees that B breaks your pattern.</p>
+      </li>
+      <li>
+        <h3>Nearest neighbor: does it match one of your tries?</h3>
+        <p><strong>The idea.</strong> Instead of comparing with your average, this detector finds the single enrollment try that is closest to the new one, using the same pattern-aware distance as detector 2. If that closest try is near enough, it says yes. It helps when you sometimes type in a slightly different way, because one matching try is all it needs.</p>
+        <figure class="det-fig">
+          <svg class="plot" viewBox="0 0 360 244" role="img" aria-labelledby="det-nn-t">
+            <title id="det-nn-t">Each of your 10 tries has a small shaded bubble around it. Try C is far from the average but lands inside the bubble of try 2, its nearest try.</title>
+            <line class="ax" x1="50" y1="200" x2="340" y2="200"/><line class="ax" x1="50" y1="20" x2="50" y2="200"/><text x="114.4" y="216" text-anchor="middle">90</text><text x="178.9" y="216" text-anchor="middle">100</text><text x="243.3" y="216" text-anchor="middle">110</text><text x="307.8" y="216" text-anchor="middle">120</text><text x="42" y="174" text-anchor="end">180</text><text x="42" y="114" text-anchor="end">200</text><text x="42" y="54" text-anchor="end">220</text><text x="195" y="236" text-anchor="middle">hold of t (ms)</text><text x="14" y="110" text-anchor="middle" transform="rotate(-90 14 110)">gap t→i (ms)</text><path class="zone" d="M198.2 110L200.4 108.2L203.2 105.9L207.1 102.4L212.7 96.8L219.3 87.6L214.4 81.3L197.1 86.7L185.4 92.7L178.9 96.6L174.8 99.2L171.9 101.1L169.7 102.6L167.8 103.9L166.2 105L164.6 106.2L163.1 107.3L161.4 108.6L159.6 110L157.4 111.8L154.6 114.1L150.7 117.6L145 123.2L138.5 132.4L143.3 138.7L160.7 133.3L172.3 127.3L178.9 123.4L183 120.8L185.9 118.9L188.1 117.4L190 116.1L191.6 115L193.1 113.8L194.7 112.7L196.3 111.4Z"/><path class="zone" d="M275.5 56L277.7 54.2L280.5 51.9L284.4 48.4L290.1 42.8L296.6 33.6L291.8 27.3L274.4 32.7L262.8 38.7L256.2 42.6L252.1 45.2L249.2 47.1L247 48.6L245.2 49.9L243.5 51L242 52.2L240.4 53.3L238.8 54.6L236.9 56L234.7 57.8L231.9 60.1L228 63.6L222.4 69.2L215.8 78.4L220.7 84.7L238 79.3L249.7 73.3L256.2 69.4L260.3 66.8L263.2 64.9L265.4 63.4L267.3 62.1L268.9 61L270.5 59.8L272 58.7L273.7 57.4Z"/><path class="zone" d="M120.8 158L123 156.2L125.8 153.9L129.7 150.4L135.4 144.8L142 135.6L137.1 129.3L119.8 134.7L108.1 140.7L101.6 144.6L97.4 147.2L94.6 149.1L92.3 150.6L90.5 151.9L88.9 153L87.3 154.2L85.8 155.3L84.1 156.6L82.3 158L80.1 159.8L77.3 162.1L73.4 165.6L67.7 171.2L61.2 180.4L66 186.7L83.4 181.3L95 175.3L101.6 171.4L105.7 168.8L108.5 166.9L110.8 165.4L112.6 164.1L114.3 163L115.8 161.8L117.4 160.7L119 159.4Z"/><path class="zone" d="M236.8 86L239 84.2L241.8 81.9L245.7 78.4L251.4 72.8L258 63.6L253.1 57.3L235.8 62.7L224.1 68.7L217.6 72.6L213.4 75.2L210.6 77.1L208.3 78.6L206.5 79.9L204.9 81L203.3 82.2L201.8 83.3L200.1 84.6L198.3 86L196.1 87.8L193.3 90.1L189.4 93.6L183.7 99.2L177.2 108.4L182 114.7L199.4 109.3L211 103.3L217.6 99.4L221.7 96.8L224.5 94.9L226.8 93.4L228.6 92.1L230.3 91L231.8 89.8L233.4 88.7L235 87.4Z"/><path class="zone" d="M159.5 134L161.7 132.2L164.5 129.9L168.4 126.4L174.1 120.8L180.6 111.6L175.8 105.3L158.4 110.7L146.8 116.7L140.2 120.6L136.1 123.2L133.2 125.1L131 126.6L129.2 127.9L127.5 129L126 130.2L124.4 131.3L122.8 132.6L120.9 134L118.7 135.8L115.9 138.1L112 141.6L106.4 147.2L99.8 156.4L104.7 162.7L122 157.3L133.7 151.3L140.2 147.4L144.3 144.8L147.2 142.9L149.4 141.4L151.3 140.1L152.9 139L154.5 137.8L156 136.7L157.7 135.4Z"/><path class="zone" d="M223.9 92L226.1 90.2L229 87.9L232.8 84.4L238.5 78.8L245.1 69.6L240.2 63.3L222.9 68.7L211.2 74.7L204.7 78.6L200.6 81.2L197.7 83.1L195.5 84.6L193.6 85.9L192 87L190.4 88.2L188.9 89.3L187.2 90.6L185.4 92L183.2 93.8L180.4 96.1L176.5 99.6L170.8 105.2L164.3 114.4L169.1 120.7L186.5 115.3L198.1 109.3L204.7 105.4L208.8 102.8L211.7 100.9L213.9 99.4L215.7 98.1L217.4 97L218.9 95.8L220.5 94.7L222.1 93.4Z"/><path class="zone" d="M172.4 122L174.6 120.2L177.4 117.9L181.3 114.4L187 108.8L193.5 99.6L188.7 93.3L171.3 98.7L159.7 104.7L153.1 108.6L149 111.2L146.1 113.1L143.9 114.6L142 115.9L140.4 117L138.9 118.2L137.3 119.3L135.7 120.6L133.8 122L131.6 123.8L128.8 126.1L124.9 129.6L119.3 135.2L112.7 144.4L117.6 150.7L134.9 145.3L146.6 139.3L153.1 135.4L157.2 132.8L160.1 130.9L162.3 129.4L164.2 128.1L165.8 127L167.4 125.8L168.9 124.7L170.6 123.4Z"/><path class="zone" d="M249.7 68L251.9 66.2L254.7 63.9L258.6 60.4L264.3 54.8L270.8 45.6L266 39.3L248.6 44.7L237 50.7L230.4 54.6L226.3 57.2L223.5 59.1L221.2 60.6L219.4 61.9L217.7 63L216.2 64.2L214.6 65.3L213 66.6L211.2 68L209 69.8L206.2 72.1L202.3 75.6L196.6 81.2L190 90.4L194.9 96.7L212.2 91.3L223.9 85.3L230.4 81.4L234.6 78.8L237.4 76.9L239.7 75.4L241.5 74.1L243.1 73L244.7 71.8L246.2 70.7L247.9 69.4Z"/><path class="zone" d="M146.6 152L148.8 150.2L151.6 147.9L155.5 144.4L161.2 138.8L167.7 129.6L162.9 123.3L145.5 128.7L133.9 134.7L127.3 138.6L123.2 141.2L120.3 143.1L118.1 144.6L116.3 145.9L114.6 147L113.1 148.2L111.5 149.3L109.9 150.6L108.1 152L105.9 153.8L103 156.1L99.2 159.6L93.5 165.2L86.9 174.4L91.8 180.7L109.1 175.3L120.8 169.3L127.3 165.4L131.4 162.8L134.3 160.9L136.5 159.4L138.4 158.1L140 157L141.6 155.8L143.1 154.7L144.8 153.4Z"/><path class="zone" d="M198.2 122L200.4 120.2L203.2 117.9L207.1 114.4L212.7 108.8L219.3 99.6L214.4 93.3L197.1 98.7L185.4 104.7L178.9 108.6L174.8 111.2L171.9 113.1L169.7 114.6L167.8 115.9L166.2 117L164.6 118.2L163.1 119.3L161.4 120.6L159.6 122L157.4 123.8L154.6 126.1L150.7 129.6L145 135.2L138.5 144.4L143.3 150.7L160.7 145.3L172.3 139.3L178.9 135.4L183 132.8L185.9 130.9L188.1 129.4L190 128.1L191.6 127L193.1 125.8L194.7 124.7L196.3 123.4Z"/><circle class="pt" cx="178.9" cy="110" r="3.5"/><circle class="pt" cx="256.2" cy="56" r="3.5"/><circle class="pt" cx="101.6" cy="158" r="3.5"/><circle class="pt" cx="217.6" cy="86" r="3.5"/><circle class="pt" cx="140.2" cy="134" r="3.5"/><circle class="pt" cx="204.7" cy="92" r="3.5"/><circle class="pt" cx="153.1" cy="122" r="3.5"/><circle class="pt" cx="230.4" cy="68" r="3.5"/><circle class="pt" cx="127.3" cy="152" r="3.5"/><circle class="pt" cx="178.9" cy="122" r="3.5"/><line class="link" x1="282.0" y1="50" x2="256.2" y2="56"/><path class="avg" d="M173.9 110h10M178.9 105v10"/><circle class="try-ok" cx="282.0" cy="50" r="5.5"/><text class="lbl try-ok" x="292.0" y="55" text-anchor="start">C</text>
+          </svg>
+          <figcaption>Each try has a small bubble. Landing inside any bubble means a score under the line (<span class="mono">0.84</span>).</figcaption>
+        </figure>
+        <div class="calc">
+          <p><strong>New try C:</strong> hold <span class="mono">116</span>, gap <span class="mono">220</span>. Its nearest try is try 2 (112, 218), at a distance of <span class="mono"><b>0.81</b></span>. That is under 0.84: <span class="chip ok">YES</span></p>
+          <p>The same try is a little too far from the average for the other two (detector 1 gives 4.84 against 4.73, detector 2 gives 2.12 against 2.03), so they both say <span class="chip bad">NO</span>.</p>
+        </div>
+      </li>
+    </ol>
+
+    <section class="det-box" aria-labelledby="det-line-h">
+      <h3 id="det-line-h">Where does “the line” come from?</h3>
+      <p>Each detector learns its own line from your 10 tries, so nobody has to pick a number by hand. It hides one try, scores it against the other 9, and repeats that for all 10. For detector 1 that gives these 10 scores:</p>
+      <p class="mono det-scores">0.00 · 0.45 · 1.16 · 1.41 · 2.04 · 2.06 · 3.27 · 3.34 · 4.49 · 4.93</p>
+      <p>The line goes where 95% of your own scores fall below it, which here is <span class="mono">4.73</span>. So roughly 1 in 20 of your real tries will still get a NO from each detector. That is why one NO is not enough to reject you.</p>
     </section>
-    <div class="tip" id="b-tip" hidden></div>
+
+    <section class="det-box" aria-labelledby="det-vote-h">
+      <h3 id="det-vote-h">The vote: 2 of 3 wins</h3>
+      <p>Each detector gives one vote. If at least <strong>2 of the 3</strong> say yes, the try is accepted. Here are the example tries:</p>
+      <div class="scroll">
+        <table class="det-table" id="det-votes">
+          <thead><tr><th scope="col">Try (hold, gap)</th><th scope="col">1 · Manhattan</th><th scope="col">2 · Mahalanobis</th><th scope="col">3 · Nearest</th><th scope="col">Result</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">A (110, 220)</th><td><span class="chip ok">YES</span></td><td><span class="chip ok">YES</span></td><td><span class="chip ok">YES</span></td><td class="res ok">Accepted: 3 of 3 detectors say it is you.</td></tr>
+            <tr><th scope="row">E (100, 205)</th><td><span class="chip ok">YES</span></td><td><span class="chip ok">YES</span></td><td><span class="chip bad">NO</span></td><td class="res ok">Accepted: 2 of 3 detectors say it is you.</td></tr>
+            <tr><th scope="row">B (110, 180)</th><td><span class="chip ok">YES</span></td><td><span class="chip bad">NO</span></td><td><span class="chip bad">NO</span></td><td class="res bad">Rejected: only 1 of 3 detectors say it is you.</td></tr>
+            <tr><th scope="row">C (116, 220)</th><td><span class="chip bad">NO</span></td><td><span class="chip bad">NO</span></td><td><span class="chip ok">YES</span></td><td class="res bad">Rejected: only 1 of 3 detectors say it is you.</td></tr>
+            <tr><th scope="row">D (130, 260)</th><td><span class="chip bad">NO</span></td><td><span class="chip bad">NO</span></td><td><span class="chip bad">NO</span></td><td class="res bad">Rejected: only 0 of 3 detectors say it is you.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>These are the same messages you see on the Try it tab after a verify.</p>
+    </section>
+
+    <div class="how-notes">
+      <p><strong>The real thing is bigger, not different.</strong> On a keyboard the page uses all 31 timings (11 holds, 10 press-to-press times and 10 gaps). On a phone it adds 22 numbers for where your finger lands on each key, 53 in all. The three detectors and the 2-of-3 vote are exactly the same.</p>
+      <p><strong>Where they come from.</strong> All three are classic detectors from a 2009 study by Killourhy and Maxion at Carnegie Mellon, which compared many ways of telling typists apart. Detectors 2 and 3 also soften the “moves together” pattern a little, so 10 tries are not over-trusted.</p>
+    </div>
   </div>
 
   <!-- ===================== HOW IT WORKS ===================== -->
@@ -369,7 +409,7 @@ h2{font-size:12px;letter-spacing:.14em}
       </li>
       <li>
         <h3>Verify compares a new try with your profile</h3>
-        <p>In step 2 (Verify) you type the password once more. The page measures the same 31 timings and puts them next to your profile. Three separate checks each decide “close enough” or “too different”. If at least two of them say close enough, you are <strong>accepted</strong>.</p>
+        <p>In step 2 (Verify) you type the password once more. The page measures the same 31 timings and puts them next to your profile. Three separate checks each decide “close enough” or “too different”. If at least two of them say close enough, you are <strong>accepted</strong>. The <a href="#detectors" data-goto="detectors">Detectors</a> tab shows how each check works, with examples.</p>
       </li>
       <li>
         <h3>Why someone else gets rejected</h3>
@@ -385,7 +425,6 @@ h2{font-size:12px;letter-spacing:.14em}
 
   <footer>
     <span class="privacy"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 7V5a4 4 0 0 1 8 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="2.5" y="7" width="11" height="8" rx="1.5" fill="currentColor"/></svg>Privacy: all data stays in your browser. Nothing is sent anywhere.</span>
-    <span>Benchmark data: CMU Keystroke Dynamics Benchmark (Killourhy &amp; Maxion, DSN 2009).</span>
   </footer>
 </div>
 
@@ -1097,7 +1136,7 @@ if (typeof module !== 'undefined') module.exports = KPT;
 </script>
 
 <script id="kp-bench">
-// ==== KP-BENCH BEGIN ==== (pure functions; needs KP; also loaded by bench.js and the Web Worker)
+// ==== KP-BENCH BEGIN ==== (pure functions; needs KP; used by bench.js, bench-mobile.js and the tests, not by the page)
 var KPB = (function () {
   'use strict';
   // Killourhy & Maxion (2009), DSN, Table 2 / cs.cmu.edu/~keystroke: mean (SD) equal-error rate
@@ -1263,18 +1302,13 @@ var KPB = (function () {
 if (typeof module !== 'undefined') module.exports = KPB;
 // ==== KP-BENCH END ====
 </script>
-<script type="application/json" id="kp-bench-results">{"meta":{"source":"CMU Keystroke Dynamics Benchmark, DSL-StrongPasswordData.csv","protocol":"train first 200 reps; test last 200 genuine + first 5 reps of each other subject","subjects":51,"nTrain":200,"nGen":200,"nImp":250,"frrTarget":0.05,"faGrid":[0,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09,0.1,0.11,0.12,0.13,0.14,0.15,0.16,0.17,0.18,0.19,0.2,0.21,0.22,0.23,0.24,0.25,0.26,0.27,0.28,0.29,0.3,0.31,0.32,0.33,0.34,0.35,0.36,0.37,0.38,0.39,0.4,0.41,0.42,0.43,0.44,0.45,0.46,0.47,0.48,0.49,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,1],"generated":"2026-10-05","synthetic":false},"paper":{"manhattan":{"name":"Manhattan (scaled)","mean":0.0962,"sd":0.0694},"nn":{"name":"Nearest Neighbor (Mahalanobis)","mean":0.0996,"sd":0.0642},"mahalanobis":{"name":"Mahalanobis","mean":0.1101,"sd":0.0645}},"ids":["s002","s003","s004","s005","s007","s008","s010","s011","s012","s013","s015","s016","s017","s018","s019","s020","s021","s022","s024","s025","s026","s027","s028","s029","s030","s031","s032","s033","s034","s035","s036","s037","s038","s039","s040","s041","s042","s043","s044","s046","s047","s048","s049","s050","s051","s052","s053","s054","s055","s056","s057"],"sizes":[5,10,20,50,100,200],"det":{"manhattan":{"name":"Scaled Manhattan","enroll":{"mean":[0.2572,0.2297,0.1966,0.1545,0.1238,0.0962],"sd":[0.1411,0.139,0.1227,0.106,0.0841,0.0694],"frr5":[0.2311,0.1745,0.1916,0.1545,0.0656,0.0482],"far5":[0.488,0.4287,0.3435,0.2617,0.2736,0.2391]},"mean":0.0962,"sd":0.0694,"eer":[0.24,0.14,0.08,0.044,0.112,0.065,0.025,0.072,0.02,0.072,0.108,0.18,0.03,0.125,0.045,0.14,0.116,0.03,0.052,0.076,0.045,0.07,0.06,0.072,0.08,0.275,0.272,0.108,0.145,0.195,0.01,0.11,0.09,0.085,0.156,0.1,0.045,0.015,0.075,0.144,0.325,0.065,0.064,0.11,0.096,0.016,0.028,0.068,0.015,0.08,0.115],"roc":[[975,705,530,485,475,425,390,360,355,345,335,335,330,325,320,310,310,290,285,275,275,275,255,245,240,230,230,215,170,170,170,170,170,170,150,145,145,145,125,115,110,110,105,105,95,95,75,55,55,50,50,25,10,0,0,0,0,0,0,0,0],[970,835,555,460,455,445,380,360,310,295,265,235,215,190,140,140,115,105,90,85,80,80,70,70,55,45,40,30,25,25,20,20,20,15,15,15,10,10,10,10,10,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0],[885,545,475,335,195,145,100,100,80,70,60,55,55,50,50,50,45,45,35,35,30,30,30,30,30,25,25,25,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,5,5,5,0,0,0,0,0,0,0],[145,75,50,50,50,40,35,30,30,30,30,30,25,25,25,20,20,20,20,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0],[1000,910,730,455,405,290,285,250,200,140,125,115,105,90,85,75,75,65,65,60,35,30,20,20,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,0,0,0,0,0,0,0,0,0,0,0],[755,400,170,155,95,95,85,65,55,55,45,45,35,25,20,20,20,20,15,15,15,10,10,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[65,45,35,25,15,15,10,10,10,10,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[520,430,265,260,165,130,95,80,60,35,25,25,25,25,20,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[300,165,15,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[830,450,205,190,130,115,90,85,60,60,45,40,40,40,40,40,40,30,20,20,20,20,20,20,20,20,20,20,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[1000,995,850,790,690,555,380,345,225,195,140,105,95,75,75,70,70,65,55,40,35,35,30,30,25,25,20,20,20,20,15,15,10,10,10,10,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[830,640,590,520,500,480,460,450,430,415,345,335,325,290,240,230,205,205,170,160,140,125,115,110,105,95,85,85,70,70,55,50,45,45,45,45,45,45,45,45,45,40,40,40,30,30,30,30,30,30,30,25,20,20,15,10,10,0,0,0,0],[455,65,50,30,15,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[815,635,450,345,245,240,230,220,190,165,135,130,125,125,125,120,105,95,95,90,85,80,80,65,65,55,45,45,45,45,40,35,30,30,30,30,30,30,30,30,25,25,20,20,20,20,20,15,15,15,15,10,10,5,5,5,5,5,0,0,0],[90,60,55,55,50,45,45,45,40,40,25,25,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,0,0,0,0,0,0,0,0],[800,630,500,450,410,385,345,290,260,255,225,215,150,140,135,130,115,100,100,95,80,75,70,70,55,50,50,50,45,40,35,35,35,30,30,30,30,30,25,20,20,20,20,20,20,20,20,20,20,15,15,15,5,5,0,0,0,0,0,0,0],[870,540,330,310,225,215,190,145,125,125,125,125,110,110,110,100,100,95,95,90,80,65,55,55,50,50,35,35,30,30,25,20,20,15,15,15,15,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0],[45,30,30,30,30,30,30,25,25,25,20,20,20,20,20,20,20,20,20,20,20,20,15,15,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[240,170,120,95,85,60,20,20,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[645,270,150,125,100,90,80,80,75,75,75,75,75,70,65,65,55,55,55,55,50,50,50,50,50,50,45,45,45,40,40,35,35,35,35,35,35,30,30,30,25,25,25,25,25,25,25,25,25,25,25,15,5,5,0,0,0,0,0,0,0],[495,135,90,85,85,45,30,30,30,30,30,30,30,30,30,30,30,30,30,25,25,25,25,25,20,20,20,20,20,20,20,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,0,0,0,0,0,0],[390,290,120,105,85,85,70,70,70,60,50,50,45,40,40,40,40,40,40,40,40,35,35,35,35,30,30,30,30,30,30,30,20,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,0,0,0,0,0],[635,325,210,120,75,75,55,55,50,50,40,40,40,30,30,30,30,30,15,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[480,210,145,130,110,100,80,75,70,65,65,65,55,45,45,45,45,40,40,40,40,35,25,25,25,25,20,20,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0],[810,360,245,165,125,125,100,90,80,75,70,70,70,60,60,60,60,60,60,55,50,45,45,45,45,45,40,40,40,40,35,35,30,30,30,30,30,25,25,25,25,25,25,25,25,25,20,20,15,15,15,15,15,15,5,5,5,0,0,0,0],[895,800,720,700,675,655,610,595,570,555,530,520,500,490,470,455,450,450,450,430,390,380,365,350,315,305,305,280,265,255,230,195,180,175,175,170,155,145,130,115,100,100,100,90,75,75,75,70,70,65,65,40,25,15,0,0,0,0,0,0,0],[1000,950,910,885,850,815,805,780,685,645,610,590,535,510,485,470,455,450,420,415,375,370,360,330,325,310,290,280,250,245,235,230,200,200,190,180,160,160,130,130,125,105,105,100,85,80,70,70,60,55,45,20,15,5,0,0,0,0,0,0,0],[675,450,365,280,190,180,140,135,125,120,110,100,100,100,85,85,80,65,60,55,55,50,50,45,45,45,45,45,40,40,40,40,40,40,40,40,40,40,40,40,35,35,35,35,35,35,20,20,20,20,20,20,20,20,15,15,10,5,0,0,0],[1000,945,820,715,585,480,415,335,305,285,240,215,200,175,155,145,135,125,100,95,85,85,85,85,70,70,70,65,65,60,55,55,55,55,55,50,50,45,45,45,30,30,30,30,30,30,30,20,20,20,20,15,0,0,0,0,0,0,0,0,0],[775,675,485,455,400,365,350,340,340,340,300,280,275,260,240,235,215,210,200,195,185,180,180,150,130,125,115,115,115,90,75,75,60,50,50,35,35,30,30,30,30,25,25,25,25,25,25,25,20,20,15,5,5,5,0,0,0,0,0,0,0],[10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[860,565,455,415,295,245,225,170,155,125,120,110,100,90,90,90,90,90,85,80,75,75,70,65,60,60,55,55,55,55,50,50,50,50,40,35,15,15,15,15,15,15,15,15,15,15,10,10,10,10,5,0,0,0,0,0,0,0,0,0,0],[430,280,230,180,125,120,105,100,95,90,70,55,55,55,55,55,50,45,45,45,40,40,40,40,35,35,35,35,35,35,35,35,35,35,35,30,30,30,25,25,25,20,20,20,20,20,20,20,20,20,20,20,10,10,10,5,5,5,0,0,0],[180,125,125,105,105,95,85,85,85,85,85,85,85,85,85,85,85,85,85,80,80,80,80,80,75,75,70,65,60,60,60,60,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,50,30,20,10,0,0,0,0,0,0],[755,630,350,320,310,300,265,255,235,225,220,220,180,160,160,160,155,150,145,145,135,120,120,120,105,105,100,100,90,90,80,80,75,75,75,75,75,75,75,75,75,75,75,70,70,65,65,65,60,55,55,45,30,30,20,10,10,10,0,0,0],[435,210,180,170,160,150,140,120,110,105,100,100,95,95,85,85,80,80,80,75,70,70,70,70,60,60,55,55,55,50,45,45,45,40,40,35,30,30,30,15,15,15,15,15,15,15,15,15,10,10,10,10,5,5,5,5,5,5,5,0,0],[135,65,55,45,45,45,45,45,40,40,40,40,40,35,30,30,30,30,25,20,20,15,15,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0],[70,15,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0],[385,205,190,165,115,100,95,90,75,65,50,35,35,35,30,30,30,30,30,30,25,25,20,20,20,20,20,20,20,20,20,20,20,20,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,0,0,0,0,0,0,0,0],[790,560,475,400,350,345,310,290,250,230,210,160,160,155,145,130,125,125,110,105,95,95,95,95,95,90,85,80,65,65,55,55,55,45,40,40,35,25,20,20,20,20,20,20,20,20,20,20,10,10,10,5,5,0,0,0,0,0,0,0,0],[990,980,940,920,885,870,805,795,720,695,665,660,650,635,590,590,585,565,545,525,515,515,490,485,470,470,385,380,370,355,330,330,325,320,315,290,260,255,235,225,205,190,185,170,160,155,150,125,115,105,105,85,75,65,50,50,15,5,5,5,0],[605,480,300,160,90,80,70,65,45,45,35,35,35,30,30,25,25,25,20,15,15,15,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0],[825,635,330,135,105,80,65,55,45,45,40,35,35,35,35,35,35,30,30,30,30,30,25,25,25,25,25,25,25,25,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,15,15,15,15,15,15,15,15,10,5,0,0,0,0,0],[765,480,370,260,215,210,210,175,140,135,115,110,90,85,80,80,75,60,60,60,55,55,50,45,40,35,35,35,35,35,35,30,30,30,25,25,20,20,15,15,15,10,10,10,10,10,10,10,10,10,5,0,0,0,0,0,0,0,0,0,0],[935,835,655,575,395,355,300,285,230,125,70,65,50,50,50,50,35,25,20,20,20,20,20,20,15,15,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[25,20,15,15,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[40,40,35,25,20,20,20,20,15,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[890,655,295,250,95,80,70,65,55,55,50,50,45,45,45,45,45,40,35,35,30,30,30,25,20,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[145,15,15,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[985,785,705,455,265,225,115,105,80,65,65,65,60,50,50,40,40,40,40,35,30,30,30,30,30,30,30,30,25,15,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0],[995,765,615,455,400,345,310,240,220,130,120,115,100,80,80,55,45,35,35,25,10,10,10,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],"meanRoc":[601,433,326,272,226,204,180,166,147,135,121,115,107,100,94,91,87,83,78,74,69,66,63,60,56,54,49,48,44,42,39,37,35,34,33,31,29,28,26,24,23,21,21,20,19,19,17,16,15,14,13,10,7,5,3,2,1,1,0,0,0]},"mahalanobis":{"name":"Mahalanobis","enroll":{"mean":[0.2293,0.2089,0.1836,0.1615,0.1303,0.108],"sd":[0.1249,0.1234,0.108,0.0996,0.0773,0.0643],"frr5":[0.0954,0.0811,0.1124,0.0929,0.0518,0.045],"far5":[0.6335,0.5733,0.4489,0.3535,0.3453,0.323]},"mean":0.108,"sd":0.0643,"eer":[0.265,0.216,0.095,0.07,0.092,0.08,0.052,0.096,0.068,0.104,0.124,0.14,0.032,0.15,0.065,0.14,0.135,0.035,0.036,0.11,0.055,0.08,0.044,0.084,0.14,0.236,0.285,0.116,0.185,0.148,0.01,0.108,0.105,0.085,0.2,0.12,0.07,0.025,0.076,0.145,0.268,0.08,0.085,0.125,0.12,0.03,0.036,0.076,0.03,0.124,0.11],"roc":[[660,520,425,415,375,355,335,330,325,320,315,315,315,300,295,295,295,285,280,275,275,275,275,275,265,265,265,265,265,265,255,255,255,250,250,245,230,225,210,210,205,195,195,185,185,185,185,185,185,180,155,110,60,25,10,5,0,0,0,0,0],[850,650,615,590,535,530,510,495,490,480,475,450,420,360,310,310,280,265,250,245,225,220,210,180,170,165,145,140,120,110,105,105,90,90,80,45,45,40,40,35,20,20,20,20,20,20,20,20,20,20,20,15,15,15,10,10,5,0,0,0,0],[470,230,135,125,120,115,115,115,105,95,80,80,75,70,60,60,55,55,55,45,45,45,40,40,40,40,35,35,35,35,30,30,30,30,30,25,25,25,25,25,25,20,15,15,15,10,10,10,10,10,10,10,10,5,5,5,0,0,0,0,0],[135,115,80,70,70,70,70,70,60,55,55,55,55,55,55,50,50,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,30,30,30,30,30,30,25,25,25,25,25,25,25,10,5,5,5,5,5,5,5,0,0],[740,405,335,300,240,195,155,135,115,105,70,60,60,60,50,40,40,30,30,30,30,30,30,30,30,30,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,20,20,15,15,15,10,10,10,10,10,10,5,5,0,0,0,0,0,0],[450,220,150,115,105,100,100,95,65,60,55,55,50,40,35,35,30,30,20,20,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0],[285,145,65,60,55,55,45,40,30,15,15,15,15,15,15,15,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0],[320,215,195,195,155,155,135,125,115,115,90,90,85,85,85,80,70,65,65,65,55,55,50,50,50,40,35,30,30,30,30,30,25,25,20,20,20,20,15,15,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0],[505,370,165,145,100,80,80,60,60,60,55,50,40,40,35,35,30,30,30,25,25,20,15,15,15,15,15,15,10,10,10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[770,400,200,185,175,150,150,150,125,120,105,95,90,90,75,75,65,55,55,50,50,45,45,45,40,40,40,40,40,30,30,30,30,30,30,30,30,25,25,25,20,20,20,20,20,20,20,20,20,15,15,15,15,5,0,0,0,0,0,0,0],[915,705,575,480,375,360,275,260,245,240,165,150,125,115,110,110,105,90,80,75,75,65,65,65,60,55,50,45,45,45,45,40,35,35,25,25,20,20,20,15,15,10,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[820,625,530,365,330,310,245,235,205,180,165,160,150,150,135,135,130,130,130,125,120,100,95,95,95,95,95,95,95,95,95,95,85,80,80,80,80,80,80,70,65,65,65,65,65,65,65,65,65,60,60,60,50,50,35,30,15,5,5,0,0],[140,100,50,50,20,20,20,20,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0],[625,555,495,480,325,275,260,240,240,225,185,170,160,155,150,150,140,140,130,130,120,115,110,110,110,105,95,95,90,85,80,80,80,70,60,60,55,55,55,55,55,55,50,50,45,45,45,40,35,35,25,15,10,10,10,5,0,0,0,0,0],[235,160,95,90,75,70,65,65,65,65,60,60,55,50,50,50,50,50,50,40,35,35,30,30,30,30,25,25,20,20,20,20,20,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,0,0,0],[610,475,390,350,270,240,220,220,195,190,175,160,155,145,140,140,130,125,115,105,100,100,95,90,85,70,65,60,60,60,55,55,55,55,50,45,45,45,45,45,45,45,40,40,30,20,20,20,20,20,20,20,10,10,10,10,0,0,0,0,0],[525,430,335,295,270,240,225,205,185,150,150,140,140,135,130,125,95,95,95,95,95,95,95,95,90,90,85,85,85,85,75,65,55,55,50,50,45,45,45,40,40,40,35,35,25,20,20,15,15,15,15,10,10,10,10,5,5,5,0,0,0],[55,50,45,40,35,30,25,25,25,25,25,20,20,20,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0],[180,135,95,70,30,30,20,20,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[230,200,180,175,175,165,160,155,130,120,115,110,105,105,95,90,90,90,85,85,80,80,70,70,50,50,45,45,45,45,45,45,45,45,40,40,40,40,40,40,40,35,35,35,35,30,25,20,20,20,15,10,10,10,5,0,0,0,0,0,0],[170,165,85,70,65,60,55,50,45,45,40,40,40,40,40,40,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,25,25,25,25,25,25,25,25,20,20,20,20,15,15,10,10,5,0,0,0,0,0,0,0],[255,210,125,120,105,100,100,80,80,75,70,70,70,70,70,70,70,70,70,55,55,55,55,50,50,50,50,50,50,50,50,45,45,45,40,40,40,40,40,30,30,30,30,30,30,30,30,30,25,25,25,20,20,10,10,5,5,5,5,5,0],[400,185,115,60,50,30,30,20,20,20,20,20,20,20,20,20,20,20,20,20,20,15,15,15,15,15,15,15,15,15,10,10,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[435,210,130,130,110,105,100,100,85,70,70,70,65,65,65,65,65,60,60,60,60,60,55,55,50,50,50,50,50,50,50,50,50,50,45,45,40,40,40,40,40,40,35,35,30,25,25,20,20,20,15,15,15,10,5,5,5,5,0,0,0],[540,540,340,325,315,305,250,225,205,205,190,180,165,160,140,140,140,120,115,115,105,105,105,105,105,105,105,105,100,100,95,90,85,80,70,70,70,65,65,65,65,65,65,65,65,65,65,60,55,55,50,50,45,30,15,15,10,10,0,0,0],[770,700,655,645,615,610,565,540,520,505,495,490,450,430,405,395,330,330,305,290,285,275,260,245,220,215,200,200,190,185,180,155,155,150,145,135,135,135,125,120,120,115,100,100,100,90,90,80,80,75,65,45,40,35,25,15,0,0,0,0,0],[900,850,810,755,700,695,695,690,675,625,590,590,565,540,525,510,505,495,490,480,420,410,370,340,335,325,295,290,285,280,275,265,255,250,230,220,215,205,190,185,180,180,155,140,125,125,120,120,110,95,90,65,45,35,20,10,5,5,5,0,0],[675,315,245,240,230,200,190,170,150,150,145,130,110,110,105,105,105,105,80,75,70,70,65,65,65,65,65,65,65,65,65,65,65,65,65,65,60,60,60,55,55,50,50,50,40,40,40,40,40,40,40,35,35,25,25,25,25,15,5,5,0],[640,610,495,485,455,400,360,355,295,275,270,245,225,225,220,205,200,190,185,185,180,170,165,165,165,150,140,140,130,120,120,115,115,105,100,100,100,100,95,80,75,65,65,60,60,60,55,50,50,50,45,35,25,15,15,10,10,0,0,0,0],[610,530,475,460,410,335,285,280,240,240,215,180,155,155,150,145,135,130,110,105,80,80,80,80,70,70,70,70,65,65,60,50,40,40,35,35,30,30,30,30,25,20,20,15,15,15,15,15,15,15,15,15,5,5,5,5,0,0,0,0,0],[20,10,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[690,440,365,245,240,215,170,165,150,140,125,105,105,105,105,105,105,105,95,95,95,85,80,80,80,80,80,80,80,80,65,65,55,55,55,55,55,55,50,50,50,50,40,40,40,40,35,35,35,25,25,20,20,10,5,5,5,0,0,0,0],[250,245,185,165,150,150,145,140,125,125,105,105,100,90,85,85,85,80,80,80,70,70,70,70,50,50,50,50,50,45,35,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,25,20,15,15,15,15,15,15,15,5,5,0],[150,100,95,90,90,90,90,85,85,85,80,80,80,80,80,80,80,75,75,75,75,75,75,75,75,75,75,75,75,75,75,75,75,75,75,75,70,70,70,70,70,70,70,70,70,70,70,70,70,70,60,60,60,50,40,40,30,20,15,5,0],[635,435,400,395,380,350,295,280,265,265,260,260,230,230,230,225,220,220,215,215,195,195,185,185,180,180,175,175,170,165,160,160,160,155,155,155,145,145,145,145,140,135,125,125,120,115,110,110,110,110,110,90,60,50,35,20,15,15,0,0,0],[375,260,210,195,180,165,155,150,140,130,130,125,120,120,115,115,115,115,100,100,100,95,95,95,95,95,95,95,95,85,85,85,85,85,85,85,85,85,80,80,75,75,75,75,75,75,75,75,75,75,75,65,55,50,20,15,5,5,5,5,0],[140,95,80,80,70,70,70,70,70,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,60,60,60,60,60,55,55,50,45,45,40,40,40,40,40,30,30,30,30,30,25,25,25,25,25,25,20,15,10,10,5,5,5,5,5,0,0],[65,50,25,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0],[465,260,205,165,120,110,100,80,70,60,45,40,40,30,30,30,30,30,25,25,25,25,25,25,25,25,25,25,20,20,20,20,20,20,20,20,20,20,20,15,15,15,10,10,10,10,10,10,10,10,10,5,5,5,0,0,0,0,0,0,0],[430,325,260,245,245,230,205,200,185,160,150,145,145,145,145,145,145,140,135,120,120,120,120,115,115,115,110,110,105,105,95,90,80,80,80,80,65,60,55,55,55,55,50,50,50,50,50,50,35,30,30,30,20,20,10,10,5,5,0,0,0],[960,925,795,770,740,680,615,575,565,545,545,540,470,470,445,435,390,380,380,365,360,335,320,300,295,285,280,265,255,240,235,220,220,220,205,195,190,185,170,165,155,140,140,140,130,125,120,110,100,100,100,85,85,70,65,50,45,30,15,5,0],[525,415,170,135,125,110,95,90,80,75,70,65,65,65,55,55,50,40,40,40,30,30,30,25,25,20,20,20,20,20,20,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,0,0,0,0,0],[195,125,110,105,105,95,95,90,85,85,85,85,85,85,80,80,80,70,70,70,60,60,60,60,60,60,60,60,55,55,55,55,55,50,50,45,45,40,40,40,40,40,40,40,40,40,40,40,40,40,40,35,30,30,30,25,25,25,25,0,0],[450,345,240,185,180,180,160,155,150,150,145,135,130,125,115,115,110,105,105,105,95,95,85,70,70,70,60,60,55,50,35,30,30,30,30,30,30,30,30,20,10,10,10,10,10,10,10,10,10,10,10,10,10,5,0,0,0,0,0,0,0],[630,580,385,355,330,320,275,220,155,150,140,135,95,95,90,90,80,75,70,70,65,65,55,50,50,45,35,35,30,30,25,20,20,15,15,10,10,10,10,10,10,10,10,10,10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[45,40,35,30,20,20,20,20,20,20,20,20,15,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,0,0,0,0,0,0,0,0,0,0],[70,70,40,40,30,30,25,25,25,20,20,20,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0],[770,705,405,295,150,135,90,80,75,75,60,55,50,50,40,40,40,40,35,35,35,35,35,35,35,35,35,35,35,30,30,30,30,30,30,30,30,30,30,30,25,25,20,20,20,20,20,20,20,20,20,10,10,10,0,0,0,0,0,0,0],[175,50,35,30,25,25,25,25,20,20,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[895,525,420,390,310,270,220,220,180,165,125,125,125,110,100,100,90,90,90,75,60,60,50,45,45,45,35,30,30,30,30,30,30,30,30,30,25,25,25,25,15,10,10,10,10,10,10,10,10,10,10,10,5,5,5,0,0,0,0,0,0],[875,565,405,365,290,280,255,215,150,130,110,110,95,75,70,55,45,45,40,35,35,35,30,30,30,30,20,20,20,20,15,15,15,15,15,10,10,10,10,10,10,10,10,10,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],"meanRoc":[465,345,265,239,210,195,176,166,151,144,133,128,119,114,108,106,100,96,92,89,84,81,77,75,72,70,66,65,63,61,59,56,54,53,50,48,46,45,44,42,40,38,36,35,33,32,31,30,29,28,26,21,17,13,10,7,5,4,2,1,0]},"nn":{"name":"Nearest neighbor","enroll":{"mean":[0.2295,0.2091,0.1789,0.1546,0.1237,0.0967],"sd":[0.1241,0.1246,0.1063,0.095,0.0769,0.0623],"frr5":[0.0938,0.0794,0.1147,0.0973,0.0562,0.0525],"far5":[0.6347,0.5764,0.4447,0.326,0.293,0.2494]},"mean":0.0967,"sd":0.0623,"eer":[0.25,0.204,0.075,0.06,0.07,0.052,0.045,0.085,0.076,0.08,0.1,0.14,0.03,0.11,0.065,0.12,0.1,0.025,0.035,0.1,0.05,0.064,0.03,0.065,0.144,0.22,0.272,0.13,0.168,0.11,0.01,0.095,0.105,0.075,0.185,0.125,0.065,0.02,0.075,0.13,0.26,0.065,0.095,0.095,0.11,0.015,0.025,0.085,0.024,0.112,0.084],"roc":[[570,495,430,415,405,375,340,325,325,325,310,305,285,280,270,265,260,260,255,250,250,250,250,250,250,250,240,240,240,240,235,235,230,230,225,225,220,220,215,210,195,195,190,190,180,180,175,175,175,160,140,105,60,50,30,5,0,0,0,0,0],[715,615,555,545,525,470,440,440,430,410,390,385,355,340,315,290,250,240,220,220,210,195,180,175,175,170,170,155,125,110,105,100,95,85,80,65,65,60,60,55,40,30,30,30,30,30,25,25,20,20,20,15,15,15,15,10,5,0,0,0,0],[570,260,145,100,95,85,80,80,70,60,60,60,55,50,40,35,30,30,30,30,25,25,25,25,20,20,20,20,20,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,5,0,0,0,0,0,0,0],[120,100,70,70,65,65,60,60,60,60,55,55,50,50,50,45,45,45,45,45,45,40,35,30,30,30,30,30,30,30,30,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,15,10,10,5,5,5,5,5,5,5,5,5,0,0],[630,340,265,220,195,145,85,70,65,60,45,45,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,25,25,20,20,20,20,20,20,20,20,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,5,0,0,0,0,0,0,0],[295,155,85,65,55,55,45,40,40,40,35,35,30,30,25,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[185,55,55,50,50,45,30,25,20,15,15,15,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[230,225,145,145,140,130,115,105,85,80,75,75,75,75,60,55,55,50,40,35,35,35,35,30,30,25,25,25,20,20,20,20,20,20,20,15,15,15,15,15,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0],[450,365,205,175,135,105,100,85,65,55,50,45,40,40,40,35,35,25,25,25,25,20,20,15,15,15,15,15,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[750,250,135,130,115,95,85,85,80,80,70,65,50,50,40,40,40,40,35,35,30,30,30,30,30,30,30,30,30,30,25,25,25,25,25,25,25,25,15,15,15,15,15,15,15,15,15,15,15,15,15,15,0,0,0,0,0,0,0,0,0],[820,665,475,315,250,210,190,175,130,110,100,95,80,75,75,75,70,70,60,55,45,45,40,40,30,30,25,25,25,25,15,15,15,15,15,15,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[670,545,385,355,295,275,260,255,240,240,180,175,150,150,130,130,130,130,125,125,115,110,110,110,110,110,100,100,100,100,100,90,90,90,85,85,85,85,85,80,75,75,60,55,55,55,55,55,55,55,55,50,35,25,25,5,5,5,5,0,0],[115,50,35,30,20,20,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0],[560,385,295,275,265,250,205,175,150,125,110,110,100,100,100,100,85,75,70,70,60,60,60,60,60,60,50,45,45,45,40,40,35,30,30,30,25,25,20,20,20,20,20,20,20,15,15,15,15,15,10,10,5,5,5,5,0,0,0,0,0],[165,120,100,80,75,70,65,65,60,55,55,45,40,35,35,30,30,30,30,30,20,15,15,15,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,0,0,0],[850,385,305,265,230,225,210,205,180,175,175,170,120,105,100,95,95,80,75,70,65,65,65,65,55,55,55,55,55,55,55,50,50,45,45,45,30,30,25,25,20,20,20,20,20,20,20,20,20,15,15,15,15,10,10,5,0,0,0,0,0],[485,340,285,280,225,170,145,140,135,105,90,80,75,60,60,45,45,45,35,35,35,30,25,25,25,25,20,20,20,15,15,15,15,15,15,15,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0],[60,45,35,25,25,25,25,20,20,15,15,15,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0],[320,130,90,75,20,20,20,15,10,10,10,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[265,195,175,150,150,145,145,135,125,110,100,95,95,90,85,85,80,80,70,70,60,60,55,45,45,45,45,45,45,45,45,45,35,35,30,30,30,30,30,30,30,30,30,30,30,30,25,25,20,20,15,5,5,5,0,0,0,0,0,0,0],[165,85,70,65,60,50,40,40,40,40,40,35,30,30,30,30,30,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,20,20,20,20,15,15,15,15,10,5,5,5,5,0,0,0,0,0,0,0],[310,195,85,75,70,70,65,60,55,45,45,45,45,45,45,45,45,45,45,45,45,45,40,40,40,40,40,40,30,30,30,30,30,30,25,25,25,15,15,15,15,15,15,15,15,15,15,15,15,15,15,10,10,10,5,5,5,5,5,0,0],[310,140,80,30,30,20,20,20,20,20,20,20,20,20,20,20,15,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[325,195,125,110,85,70,65,65,65,60,60,50,50,50,50,50,50,45,45,45,45,45,45,35,35,35,35,35,35,35,30,30,30,25,20,20,20,20,20,20,20,20,20,20,20,20,15,15,5,5,5,5,5,5,5,5,5,0,0,0,0],[640,410,305,280,255,255,250,220,210,200,185,175,160,160,145,135,115,110,110,95,95,95,95,95,95,90,90,80,80,80,80,75,70,65,65,60,55,55,45,45,45,45,45,40,40,40,40,40,35,35,35,15,15,15,10,10,10,10,0,0,0],[915,650,640,600,580,575,550,535,455,455,435,425,410,385,345,335,290,285,260,235,230,230,220,210,185,180,170,160,150,150,150,150,150,150,145,135,130,125,115,115,105,105,90,85,75,70,65,60,55,55,55,40,30,20,10,10,5,0,0,0,0],[870,810,765,760,700,695,645,620,605,595,565,555,540,520,490,465,460,445,415,390,365,355,345,325,315,310,295,295,260,255,255,255,255,215,175,175,165,160,150,140,130,115,100,95,90,90,90,85,85,85,70,45,20,20,15,5,5,5,5,0,0],[755,310,255,245,200,200,165,160,160,155,140,140,135,130,125,125,120,115,110,105,100,95,95,90,85,75,70,60,60,55,55,55,50,50,50,50,45,45,45,45,45,40,35,35,35,35,35,35,35,35,35,30,30,20,20,15,15,10,5,5,0],[795,540,490,460,395,365,325,320,280,235,210,210,195,195,185,175,175,160,160,145,135,135,135,135,135,135,125,125,125,110,105,105,105,100,95,90,80,75,70,65,65,65,60,60,60,60,45,45,45,45,40,30,20,15,15,10,5,0,0,0,0],[680,550,475,435,380,340,305,290,145,130,110,110,110,110,100,95,85,85,70,70,55,55,50,45,40,40,40,40,40,40,40,40,40,30,30,30,20,20,20,15,15,15,15,15,15,15,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0],[15,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[715,400,250,230,215,190,135,110,95,95,95,95,85,75,75,75,75,75,60,60,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,40,40,35,35,35,25,25,25,25,25,25,25,25,25,15,10,5,5,5,0,0,0,0,0],[350,215,190,165,150,145,125,125,120,115,105,105,100,85,70,65,60,55,50,50,50,45,45,45,35,35,30,30,30,30,25,25,25,25,25,25,25,25,20,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,5,5,5,0],[135,100,90,90,90,85,80,75,70,65,65,65,60,60,60,60,60,60,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,55,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,40,30,25,20,20,5,0],[650,555,500,445,420,355,335,295,295,290,280,260,255,250,245,245,230,220,185,185,180,180,170,170,170,155,155,155,155,150,145,135,135,130,130,120,115,115,115,115,105,105,100,100,90,85,85,85,85,80,80,75,45,45,40,25,15,10,0,0,0],[430,305,260,220,210,195,175,165,150,135,135,135,125,125,125,125,110,110,110,110,105,105,105,105,105,105,95,95,90,90,85,80,80,80,80,70,70,70,70,65,65,65,65,65,60,60,60,55,55,55,55,55,50,20,15,10,5,5,5,5,0],[125,90,80,70,65,65,65,65,65,60,60,60,60,60,55,55,55,55,55,50,45,45,45,40,40,40,40,40,30,30,25,25,25,25,25,25,25,20,20,15,15,15,15,15,15,15,15,15,15,15,15,5,5,5,5,5,5,5,5,0,0],[30,20,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0],[375,250,150,140,120,115,110,75,65,55,40,40,30,30,25,25,25,25,25,25,25,25,20,20,20,20,20,20,20,20,20,20,15,15,15,15,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0],[425,375,250,230,210,210,200,180,155,140,140,135,130,130,125,110,105,105,105,100,95,90,90,90,90,85,75,75,70,70,70,65,55,50,45,40,40,40,40,35,35,35,30,30,30,30,20,20,20,20,20,15,10,10,5,5,5,5,5,0,0],[910,815,760,725,670,655,615,605,595,545,525,510,455,440,420,410,405,365,345,345,330,330,325,310,285,265,260,245,230,225,220,205,170,170,150,140,140,140,140,135,130,130,110,110,110,100,90,90,90,90,85,85,70,55,40,25,20,15,5,5,0],[375,280,195,140,100,95,65,65,55,50,50,50,50,45,35,35,35,35,20,20,20,20,20,20,20,15,15,15,15,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0],[725,200,145,125,120,115,110,95,95,95,95,95,90,90,90,85,85,85,85,85,85,85,80,80,75,75,75,70,70,60,60,60,60,60,60,55,55,55,55,55,55,55,55,55,50,50,50,50,50,45,45,45,40,30,30,30,25,20,5,0,0],[610,315,180,175,150,135,130,130,130,125,95,90,90,90,70,70,65,65,65,65,65,65,50,50,45,45,40,35,35,35,25,20,15,15,15,15,15,15,15,15,15,15,15,10,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0],[655,460,375,325,285,270,260,225,210,115,115,110,100,85,65,60,45,45,45,45,40,35,30,30,25,25,15,15,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[15,15,15,15,15,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[55,45,30,25,15,15,15,15,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0],[790,490,425,180,135,105,105,105,85,85,70,65,60,60,45,45,45,40,30,30,30,30,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,20,20,20,20,20,20,20,20,20,15,15,15,10,10,10,5,5,0,0,0,0,0,0,0],[200,30,25,10,10,10,10,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[725,490,295,240,230,205,185,175,160,140,125,115,90,85,80,75,70,70,55,50,35,30,30,25,25,25,20,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[645,340,295,220,150,130,115,110,85,80,80,80,80,55,50,45,30,30,20,20,15,15,10,10,10,10,10,10,10,10,10,10,10,10,10,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],"meanRoc":[462,302,237,208,185,171,156,147,134,124,115,112,103,99,92,88,83,80,74,72,68,66,64,61,59,58,55,53,50,49,47,46,43,41,39,38,36,35,33,32,30,29,27,26,25,25,23,23,22,21,20,17,13,10,8,5,4,3,2,0,0]}}}</script>
 <script>
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
-  var IDS = KP.DETECTORS.map(function (d) { return d.id; });
-  var PRE = JSON.parse($('kp-bench-results').textContent);
-  var ui = { res: PRE, live: false, subject: -1, zoom: true, metric: 'eer', drawn: false, hits: [] };
-  var f3 = function (v) { return v.toFixed(3); };
 
   // ---------- tabs (ARIA tabs: arrow keys, Home/End) ----------
-  var TABS = ['try', 'bench', 'how'];
+  var TABS = ['try', 'detectors', 'how'];
   function showTab(t, focus) {
     if (TABS.indexOf(t) < 0) t = 'try';
     TABS.forEach(function (k) {
@@ -1283,8 +1317,6 @@ if (typeof module !== 'undefined') module.exports = KPB;
       if (on && focus) b.focus();
     });
     try { localStorage.setItem('keyprint.tab', t); } catch (e) { }
-    if (t === 'bench') drawAll();
-    document.dispatchEvent(new CustomEvent('kp:tab', { detail: t }));
   }
   TABS.forEach(function (k, i) {
     var b = $('tab-' + k);
@@ -1300,245 +1332,9 @@ if (typeof module !== 'undefined') module.exports = KPB;
     e.preventDefault(); showTab(a.dataset.goto, true); window.scrollTo(0, 0);
   });
 
-  // ---------- theme-aware canvas helpers ----------
-  function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
-  function colors() { return { c: [css('--c1'), css('--c2'), css('--c3')], ink: css('--ink'), muted: css('--muted'), line: css('--line'), surface: css('--surface'), font: css('--font-mono') }; }
-  function setup(cv) {
-    // backing store = CSS size × devicePixelRatio (sharp on retina); height shrinks on narrow screens
-    var dpr = window.devicePixelRatio || 1, W = cv.clientWidth || 600, base = +(cv.dataset.h || (cv.dataset.h = cv.getAttribute('height')));
-    var H = Math.round(Math.min(base, Math.max(base * 0.65, W * 0.8)));
-    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + 'px';
-    var g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
-    return { g: g, W: W, H: H };
-  }
-  function axes(g, C, box, xt, yt, xlab, ylab) {
-    g.font = '10px ' + C.font; g.lineWidth = 1;
-    xt.forEach(function (t) {
-      g.strokeStyle = C.line; g.beginPath(); g.moveTo(t.x, box.t); g.lineTo(t.x, box.b); g.stroke();
-      g.fillStyle = C.muted; g.textAlign = 'center'; g.fillText(t.l, t.x, box.b + 14);
-    });
-    yt.forEach(function (t) {
-      g.strokeStyle = C.line; g.beginPath(); g.moveTo(box.l, t.y); g.lineTo(box.r, t.y); g.stroke();
-      g.fillStyle = C.muted; g.textAlign = 'right'; g.fillText(t.l, box.l - 6, t.y + 3);
-    });
-    g.fillStyle = C.muted; g.textAlign = 'center'; g.fillText(xlab, (box.l + box.r) / 2, box.b + 30);
-    g.save(); g.translate(12, (box.t + box.b) / 2); g.rotate(-Math.PI / 2); g.fillText(ylab, 0, 0); g.restore();
-  }
-  function line(g, pts, color, w, dash) {
-    g.strokeStyle = color; g.lineWidth = w; g.setLineDash(dash || []); g.beginPath();
-    pts.forEach(function (p, i) { if (i) g.lineTo(p[0], p[1]); else g.moveTo(p[0], p[1]); });
-    g.stroke(); g.setLineDash([]);
-  }
-
-  // ---------- table ----------
-  function renderTable() {
-    var r = ui.res, i10 = r.sizes.indexOf(10);
-    $('b-protocol').textContent = 'CMU DSL-StrongPasswordData (' + r.meta.subjects + ' subjects, .tie5Roanl). Per subject: ' + r.meta.protocol +
-      ' (' + r.meta.nGen + ' genuine, ' + r.meta.nImp + ' impostor). EER = threshold where FAR = FRR, linearly interpolated on the ROC.';
-    $('b-source').textContent = ui.live ? 'live run' : 'precomputed · ' + (r.meta.generated || '');
-    $('b-source').className = 'badge' + (ui.live ? ' live' : '');
-    $('b-table').innerHTML = '<table><thead><tr><th>Detector</th><th class="num">KeyPrint EER (SD)</th><th class="num">Paper EER (SD)</th><th class="num">Δ</th>' +
-      (i10 >= 0 ? '<th class="num">EER @ 10 reps</th><th class="num">FRR @ 10 reps, 5% target</th>' : '') + '</tr></thead><tbody>' +
-      IDS.map(function (id, k) {
-        var o = r.det[id], p = r.paper[id], d = o.mean - p.mean;
-        return '<tr><td><span class="chip" style="background:none;color:' + colors().c[k] + '">■</span> ' + o.name + '</td>' +
-          '<td class="num">' + f3(o.mean) + ' (' + f3(o.sd) + ')</td><td class="num">' + f3(p.mean) + ' (' + f3(p.sd) + ')</td>' +
-          '<td class="num ' + (d <= 0 ? 'good' : 'worse') + '">' + (d >= 0 ? '+' : '') + f3(d) + '</td>' +
-          (i10 >= 0 ? '<td class="num">' + f3(o.enroll.mean[i10]) + '</td><td class="num">' + (o.enroll.frr5[i10] * 100).toFixed(1) + '%</td>' : '') + '</tr>';
-      }).join('') + '</tbody></table>';
-    $('b-enroll-table').innerHTML = '<table><thead><tr><th class="num">Training reps</th>' + IDS.map(function (id) { return '<th class="num">' + r.det[id].name + ' EER</th>'; }).join('') +
-      IDS.map(function (id) { return '<th class="num">' + r.det[id].name.split(' ')[0] + ' FRR / FAR @5%</th>'; }).join('') + '</tr></thead><tbody>' +
-      r.sizes.map(function (n, i) {
-        return '<tr><td class="num">' + n + '</td>' + IDS.map(function (id) { var e = r.det[id].enroll; return '<td class="num">' + f3(e.mean[i]) + ' ± ' + f3(e.sd[i]) + '</td>'; }).join('') +
-          IDS.map(function (id) { var e = r.det[id].enroll; return '<td class="num">' + (e.frr5[i] * 100).toFixed(1) + '% / ' + (e.far5[i] * 100).toFixed(1) + '%</td>'; }).join('') + '</tr>';
-      }).join('') + '</tbody></table>';
-    var sel = $('b-subject'), order = r.ids.map(function (id, i) { return i; }).sort(function (a, b) { return r.ids[a] < r.ids[b] ? -1 : 1; });
-    sel.innerHTML = '<option value="-1">All (mean)</option>' + order.map(function (i) { return '<option value="' + i + '">' + r.ids[i] + '</option>'; }).join('');
-    sel.value = String(ui.subject);
-    var e = r.det.manhattan.enroll, i200 = r.sizes.length - 1;
-    $('en-note').textContent = 'Same test set at every size (last 200 genuine + 250 impostor reps); training = first n reps. The Try it tab enrolls 10: Scaled Manhattan EER ' +
-      f3(e.mean[r.sizes.indexOf(10)]) + ' vs ' + f3(e.mean[i200]) + ' at 200, and the 5%-FRR threshold set from 10 leave-one-out scores lets through ' +
-      (e.frr5[r.sizes.indexOf(10)] * 100).toFixed(0) + '% false rejects on held-out reps: a quantile of 10 scores is noisy and runs low, and 10 reps from one sitting miss the drift between sessions.';
-  }
-
-  // ---------- ROC ----------
-  function drawRoc() {
-    var C = colors(), s = setup($('c-roc')), g = s.g, r = ui.res, grid = r.meta.faGrid;
-    var xmax = ui.zoom ? 0.3 : 1, ymin = ui.zoom ? 0.5 : 0;
-    var box = { l: 44, r: s.W - 12, t: 10, b: s.H - 40 };
-    var X = function (v) { return box.l + v / xmax * (box.r - box.l); }, Y = function (v) { return box.b - (v - ymin) / (1 - ymin) * (box.b - box.t); };
-    var xs = ui.zoom ? [0, .05, .1, .15, .2, .25, .3] : [0, .2, .4, .6, .8, 1], ys = ui.zoom ? [.5, .6, .7, .8, .9, 1] : [0, .2, .4, .6, .8, 1];
-    axes(g, C, box, xs.map(function (v) { return { x: X(v), l: v.toFixed(2) }; }), ys.map(function (v) { return { y: Y(v), l: v.toFixed(1) }; }), 'false-alarm rate (FAR)', 'hit rate (1 − FRR)');
-    g.save(); g.beginPath(); g.rect(box.l, box.t, box.r - box.l, box.b - box.t); g.clip();
-    line(g, [[X(0), Y(1)], [X(Math.min(xmax, 1 - ymin)), Y(1 - Math.min(xmax, 1 - ymin))]], C.muted, 1, [4, 4]);
-    var curve = function (arr) {
-      var pts = [];
-      grid.forEach(function (fa, k) { if (fa <= xmax + 1e-9) pts.push([X(fa), Y(1 - arr[k] / 1000)]); });
-      return pts;
-    };
-    IDS.forEach(function (id, k) {
-      var o = r.det[id];
-      if (ui.subject >= 0) { line(g, curve(o.meanRoc), C.c[k], 1, [3, 3]); line(g, curve(o.roc[ui.subject]), C.c[k], 2.25); }
-      else line(g, curve(o.meanRoc), C.c[k], 2.25);
-    });
-    g.restore();
-    $('b-legend').innerHTML = IDS.map(function (id, k) {
-      var o = r.det[id], v = ui.subject >= 0 ? o.eer[ui.subject] : o.mean;
-      return '<span><i style="background:' + C.c[k] + '"></i>' + o.name + ' <span class="mono hint">EER ' + f3(v) + '</span></span>';
-    }).join('');
-    $('roc-note').textContent = ui.subject >= 0
-      ? 'Subject ' + r.ids[ui.subject] + ' (solid) against the 51-subject mean (dotted). Dashed diagonal: FAR = FRR.'
-      : 'Mean over ' + r.meta.subjects + ' subjects of the best hit rate at each false-alarm budget. Dashed diagonal: FAR = FRR; each curve crosses it near its EER.';
-  }
-
-  // ---------- enrollment curve ----------
-  function drawEnroll() {
-    var C = colors(), s = setup($('c-enroll')), g = s.g, r = ui.res, key = ui.metric === 'eer' ? 'mean' : 'frr5';
-    var box = { l: 44, r: s.W - 14, t: 10, b: s.H - 40 };
-    var lo = Math.log(r.sizes[0]), hi = Math.log(r.sizes[r.sizes.length - 1]);
-    var ymax = 0; IDS.forEach(function (id) { r.det[id].enroll[key].forEach(function (v) { ymax = Math.max(ymax, v); }); });
-    ymax = Math.ceil(ymax * 1.1 * 20) / 20 || 0.1;
-    var X = function (n) { return box.l + (Math.log(n) - lo) / (hi - lo) * (box.r - box.l); }, Y = function (v) { return box.b - v / ymax * (box.b - box.t); };
-    var yt = []; for (var v = 0; v <= ymax + 1e-9; v += ymax > 0.4 ? 0.1 : 0.05) yt.push({ y: Y(v), l: v.toFixed(2) });
-    axes(g, C, box, r.sizes.map(function (n) { return { x: X(n), l: String(n) }; }), yt, 'training repetitions (log scale)', ui.metric === 'eer' ? 'mean EER' : 'held-out FRR');
-    if (ui.metric === 'frr') { line(g, [[box.l, Y(0.05)], [box.r, Y(0.05)]], C.ink, 1, [5, 4]); g.fillStyle = C.ink; g.textAlign = 'left'; g.fillText('target 5%', box.l + 4, Y(0.05) - 5); }
-    IDS.forEach(function (id, k) {
-      var e = r.det[id].enroll, pts = r.sizes.map(function (n, i) { return [X(n), Y(e[key][i])]; });
-      line(g, pts, C.c[k], 2);
-      pts.forEach(function (p) { g.fillStyle = C.c[k]; g.beginPath(); g.arc(p[0], p[1], 3.5, 0, 7); g.fill(); });
-      if (ui.metric === 'eer') {   // paper reference at 200 reps: hollow diamond
-        var px = X(200) - 6 - 4 * k, py = Y(r.paper[id].mean);
-        g.strokeStyle = C.c[k]; g.lineWidth = 1.5; g.beginPath(); g.moveTo(px, py - 5); g.lineTo(px + 5, py); g.lineTo(px, py + 5); g.lineTo(px - 5, py); g.closePath(); g.stroke();
-      }
-    });
-    if (ui.metric === 'eer') { g.fillStyle = C.muted; g.textAlign = 'right'; g.fillText('◇ paper', box.r, box.t + 10); }
-  }
-
-  // ---------- per-subject spread ----------
-  function drawSpread() {
-    var C = colors(), s = setup($('c-spread')), g = s.g, r = ui.res;
-    var box = { l: 130, r: s.W - 14, t: 8, b: s.H - 34 }, rowH = (box.b - box.t) / IDS.length;
-    if (s.W < 480) box.l = 92;
-    var xmax = 0; IDS.forEach(function (id) { xmax = Math.max(xmax, r.paper[id].mean * 1.15); r.det[id].eer.forEach(function (v) { xmax = Math.max(xmax, v); }); });
-    xmax = Math.ceil(xmax * 10) / 10 || 0.1;
-    var X = function (v) { return box.l + v / xmax * (box.r - box.l); }, xt = [];
-    for (var v = 0; v <= xmax + 1e-9; v += xmax > 0.5 ? 0.1 : 0.05) xt.push({ x: X(v), l: v.toFixed(2) });
-    axes(g, C, box, xt, [], 'per-subject EER', '');
-    ui.hits = [];
-    IDS.forEach(function (id, k) {
-      var o = r.det[id], cy = box.t + rowH * (k + 0.5);
-      g.fillStyle = C.ink; g.textAlign = 'right'; g.font = '12px ' + C.font; g.fillText(s.W < 480 ? o.name.split(' ')[0] : o.name, box.l - 10, cy + 4); g.font = '10px ' + C.font;
-      o.eer.forEach(function (e, i) {
-        var jit = ((i * 37) % 17 / 16 - 0.5) * rowH * 0.55, x = X(e), y = cy + jit, sel = i === ui.subject;
-        g.globalAlpha = sel ? 1 : 0.55; g.fillStyle = C.c[k]; g.beginPath(); g.arc(x, y, sel ? 5 : 3.5, 0, 7); g.fill();
-        if (sel) { g.globalAlpha = 1; g.strokeStyle = C.ink; g.lineWidth = 1.5; g.stroke(); }
-        ui.hits.push({ x: x, y: y, i: i, k: k, e: e });
-      });
-      g.globalAlpha = 1;
-      line(g, [[X(o.mean), cy - rowH * 0.4], [X(o.mean), cy + rowH * 0.4]], C.ink, 2);
-      line(g, [[X(r.paper[id].mean), cy - rowH * 0.4], [X(r.paper[id].mean), cy + rowH * 0.4]], C.muted, 1.5, [3, 2]);
-    });
-    g.fillStyle = C.muted; g.textAlign = 'right'; g.fillText('solid = KeyPrint mean · dashed = paper mean', box.r, s.H - 4);
-  }
-  var spread = $('c-spread'), tip = $('b-tip');
-  function nearest(e) {
-    var b = spread.getBoundingClientRect(), mx = e.clientX - b.left, my = e.clientY - b.top, best = null, bd = 64;
-    ui.hits.forEach(function (h) { var d = (h.x - mx) * (h.x - mx) + (h.y - my) * (h.y - my); if (d < bd) { bd = d; best = h; } });
-    return best;
-  }
-  spread.addEventListener('pointermove', function (e) {
-    var h = nearest(e);
-    if (!h) { tip.hidden = true; spread.style.cursor = ''; return; }
-    spread.style.cursor = 'pointer'; tip.hidden = false;
-    tip.textContent = ui.res.ids[h.i] + ' · ' + ui.res.det[IDS[h.k]].name + ' · EER ' + f3(h.e);
-    tip.style.left = (e.clientX + 12) + 'px'; tip.style.top = (e.clientY - 28) + 'px';
-  });
-  spread.addEventListener('pointerleave', function () { tip.hidden = true; });
-  spread.addEventListener('click', function (e) { var h = nearest(e); ui.subject = h ? (h.i === ui.subject ? -1 : h.i) : -1; $('b-subject').value = String(ui.subject); drawAll(); });
-  $('b-subject').addEventListener('change', function (e) { ui.subject = +e.target.value; drawAll(); });
-
-  function seg(a, b, on) { $(a).setAttribute('aria-pressed', on); $(b).setAttribute('aria-pressed', !on); }
-  $('roc-zoom').addEventListener('click', function () { ui.zoom = true; seg('roc-zoom', 'roc-full', true); drawRoc(); });
-  $('roc-full').addEventListener('click', function () { ui.zoom = false; seg('roc-zoom', 'roc-full', false); drawRoc(); });
-  $('en-eer').addEventListener('click', function () { ui.metric = 'eer'; seg('en-eer', 'en-frr', true); drawEnroll(); });
-  $('en-frr').addEventListener('click', function () { ui.metric = 'frr'; seg('en-eer', 'en-frr', false); drawEnroll(); });
-
-  function drawAll() { if ($('view-bench').hidden) return; drawRoc(); drawEnroll(); drawSpread(); }
-  // redraw on box-width changes (ResizeObserver) and on devicePixelRatio changes (zoom, moving to another screen)
-  var pend = 0, schedule = function () { if (!pend) pend = requestAnimationFrame(function () { pend = 0; drawAll(); }); };
-  if (window.ResizeObserver) {
-    var cw = new WeakMap();
-    var ro = new ResizeObserver(function (entries) {
-      if (entries.some(function (en) { var w = Math.round(en.contentRect.width); if (cw.get(en.target) === w) return false; cw.set(en.target, w); return true; })) schedule();
-    });
-    document.querySelectorAll('#view-bench .chart').forEach(function (el) { ro.observe(el); });
-  } else window.addEventListener('resize', schedule);
-  (function watchDpr() {
-    if (!window.matchMedia) return;
-    var mq = matchMedia('(resolution: ' + (window.devicePixelRatio || 1) + 'dppx)');
-    var on = function () { mq.removeEventListener('change', on); schedule(); watchDpr(); };
-    if (mq.addEventListener) mq.addEventListener('change', on);
-  })();
-
-  // ---------- run live ----------
-  var drop = $('b-drop'), busy = false;
-  function bstatus(msg, kind) { var s = $('b-status'); s.textContent = msg; s.className = 'status' + (kind ? ' ' + kind : ''); }
-  function progress(d, t) { $('b-pfill').style.width = (d / t * 100).toFixed(1) + '%'; bstatus('Running… ' + d + ' / ' + t + ' subject × size steps'); }
-  function finish(res, t0, how) {
-    busy = false; drop.classList.remove('busy');
-    res.meta.generated = new Date().toISOString().slice(0, 10);
-    ui.res = res; ui.live = true; ui.subject = -1; $('b-revert').hidden = false;
-    renderTable(); drawAll();
-    bstatus('Done in ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s (' + how + '). Tables and charts now show your run.', 'ok');
-  }
-  function fail(msg) { busy = false; drop.classList.remove('busy'); $('b-pfill').style.width = '0'; bstatus('Could not run: ' + msg, 'bad'); }
-  function mainThread(text, t0) {   // fallback when a Worker can't be created here
-    var run;
-    try { run = KPB.createRun(KPB.parseCSV(text)); } catch (e) { fail(e.message); return; }
-    (function tick() {
-      var until = Date.now() + 40;
-      try { while (Date.now() < until && run.step()); } catch (e) { fail(e.message); return; }
-      progress(run.done(), run.total);
-      if (run.done() < run.total) setTimeout(tick, 0); else finish(run.result(), t0, 'main thread');
-    })();
-  }
-  function runLive(text) {
-    if (busy) return; busy = true; drop.classList.add('busy'); $('b-pfill').style.width = '0';
-    var t0 = Date.now(), w = null, url = null, started = false;
-    var src = $('kp-detectors').textContent + '\n' + $('kp-bench').textContent + '\n' +
-      'onmessage=function(e){try{var s=KPB.parseCSV(e.data);var run=KPB.createRun(s);postMessage({t:"p",d:0,n:run.total});' +
-      'while(run.step()){postMessage({t:"p",d:run.done(),n:run.total});}postMessage({t:"done",r:run.result()});}catch(err){postMessage({t:"err",m:String(err&&err.message||err)});}};';
-    try { url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' })); w = new Worker(url); } catch (e) { w = null; }
-    if (!w) { bstatus('Web Workers are unavailable here; running on the main thread.'); mainThread(text, t0); return; }
-    w.onmessage = function (e) {
-      var m = e.data; started = true;
-      if (m.t === 'p') progress(m.d, m.n);
-      else if (m.t === 'done') { w.terminate(); URL.revokeObjectURL(url); finish(m.r, t0, 'Web Worker'); }
-      else if (m.t === 'err') { w.terminate(); URL.revokeObjectURL(url); fail(m.m); }
-    };
-    w.onerror = function (e) {
-      e.preventDefault(); w.terminate(); URL.revokeObjectURL(url);
-      if (!started) { bstatus('Worker blocked here; running on the main thread.'); mainThread(text, t0); } else fail(e.message || 'worker error');
-    };
-    w.postMessage(text); bstatus('Parsing CSV…');
-  }
-  function readFile(file) {
-    if (!file) return;
-    if (file.size > 50e6) { bstatus('That file is too large to be the CMU CSV.', 'bad'); return; }
-    var rd = new FileReader(); rd.onload = function () { runLive(rd.result); }; rd.onerror = function () { fail('could not read the file'); }; rd.readAsText(file);
-  }
-  $('b-file').addEventListener('change', function (e) { readFile(e.target.files[0]); e.target.value = ''; });
-  ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
-  ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
-  drop.addEventListener('drop', function (e) { readFile(e.dataTransfer.files[0]); });
-  drop.addEventListener('click', function () { if (!busy) $('b-file').click(); });
-  drop.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!busy) $('b-file').click(); } });
-  $('b-revert').addEventListener('click', function () { ui.res = PRE; ui.live = false; ui.subject = -1; $('b-revert').hidden = true; renderTable(); drawAll(); bstatus('Showing precomputed results.'); });
-
-  renderTable();
   var t0 = 'try'; try { t0 = localStorage.getItem('keyprint.tab') || 'try'; } catch (e) { }
   var h = (location.hash || '').slice(1); if (TABS.indexOf(h) >= 0) t0 = h;
-  showTab(t0 === 'live' ? 'try' : t0);
+  showTab(t0);
 })();
 </script>
 <!--ARTIFACT-BODY-END-->

@@ -1,7 +1,8 @@
-// node test_detectors.js — detector + EER tests on the code inside index.html (KP-DETECTORS, KP-BENCH blocks).
+// node test_detectors.js — detector + EER tests on the code inside index.html (KP-DETECTORS, KP-BENCH blocks),
+// plus a check that every number in the Detectors tab's worked example matches the real detector code.
 'use strict';
 const crypto = require('crypto');
-const { block, load, check, done } = require('./test_util');
+const { HTML, block, load, check, done } = require('./test_util');
 const { KP, KPB } = load('KP-DETECTORS', 'KP-BENCH');
 
 // The detector block has been frozen since M2; benchmark numbers depend on it byte for byte.
@@ -48,6 +49,35 @@ check('same distribution -> ~0.5', near(KPB.eer(a, b).eer, 0.5, 0.03), KPB.eer(a
 const imp = range(4000, () => 2 + g());
 const phi = 0.15865525393145707;   // Φ(−1): N(0,1) vs N(2,1) cross at 1
 check('N(0,1) vs N(2,1) -> Φ(−1) ≈ 0.159', near(KPB.eer(a, imp).eer, phi, 0.015), KPB.eer(a, imp).eer);
+
+console.log('Detectors tab worked example (numbers printed on the page)');
+const EX = [[100, 200], [112, 218], [88, 184], [106, 208], [94, 192], [104, 206], [96, 196], [108, 214], [92, 186], [100, 196]]
+  .map((r) => r.map((v) => v / 1000));
+const exLine = {}, exModel = {};
+KP.DETECTORS.forEach((d) => { exModel[d.id] = d.train(EX); exLine[d.id] = KP.thresholdAt(KP.looScores(d, EX), 0.05); });
+const exScore = (id, h, g) => KP.DETECTORS.find((d) => d.id === id).score(exModel[id], [h / 1000, g / 1000]);
+const f2 = (v) => v.toFixed(2);
+const DET = (HTML.match(/<div id="view-detectors"[\s\S]*?<!-- =+ HOW IT WORKS/) || [''])[0];
+check('Manhattan wobble 6 ms / 9.2 ms', f2(exModel.manhattan.mad[0] * 1000) === '6.00' && f2(exModel.manhattan.mad[1] * 1000) === '9.20');
+check('Manhattan LOO scores as printed', DET.includes(KP.looScores(KP.scaledManhattan, EX).map(f2).sort((a, b) => a - b).join(' · ')));
+const EXPECT = [
+  ['manhattan', null, null, 'line', '4.73'], ['mahalanobis', null, null, 'line', '2.03'], ['nn', null, null, 'line', '0.84'],
+  ['manhattan', 110, 220, 'A', '3.84'], ['manhattan', 110, 180, 'B', '3.84'], ['manhattan', 130, 260, 'D', '11.52'], ['manhattan', 116, 220, 'C', '4.84'],
+  ['mahalanobis', 110, 220, 'A', '1.83'], ['mahalanobis', 110, 180, 'B', '6.36'], ['mahalanobis', 116, 220, 'C', '2.12'], ['nn', 116, 220, 'C', '0.81']
+];
+EXPECT.forEach(([id, h, g, what, want]) => {
+  const got = f2(h == null ? exLine[id] : exScore(id, h, g));
+  check(id + ' ' + what + ' = ' + want + ' (and shown on the page)', got === want && DET.includes(want), got);
+});
+const VOTES = { A: [110, 220, 'YYY'], E: [100, 205, 'YYN'], B: [110, 180, 'YNN'], C: [116, 220, 'NNY'], D: [130, 260, 'NNN'] };
+Object.keys(VOTES).forEach((k) => {
+  const [h, g, want] = VOTES[k];
+  const got = KP.DETECTORS.map((d) => exScore(d.id, h, g) <= exLine[d.id] ? 'Y' : 'N').join('');
+  const yes = got.split('Y').length - 1, row = (DET.match(new RegExp('<th scope="row">' + k + ' \\(' + h + ', ' + g + '\\)</th>(.*?)</tr>')) || [])[1] || '';
+  const shown = (row.match(/chip (ok|bad)/g) || []).map((c) => c.endsWith('ok') ? 'Y' : 'N').join('');
+  check('vote ' + k + ': ' + want + ' -> ' + (yes >= 2 ? 'accepted' : 'rejected') + ' (table matches)', got === want && shown === want &&
+    row.includes((yes >= 2 ? 'Accepted: ' : 'Rejected: only ') + yes + ' of 3 detectors say it is you.'), got + ' shown ' + shown);
+});
 
 console.log('Freeze');
 const hash = crypto.createHash('sha256').update(block('KP-DETECTORS')).digest('hex');
