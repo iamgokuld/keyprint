@@ -27,9 +27,9 @@ Passwords check what you typed. KeyPrint checks how long you held each key, how 
 - **Enroll:** type the passphrase `.tie5Roanl` ten times so KeyPrint learns your rhythm.
 - **Verify:** type it once more and three detectors vote on whether it is really you. Hand the keyboard to a friend and watch it turn them down.
 - **Phone mode:** on a phone, an on-screen keypad records where your thumb lands, not just when.
-- **Save profiles:** profiles live in your browser, and you can export them as JSON if you want a backup or a souvenir.
+- **Reset:** a Reset button on Try it (and on How it works) clears your profile so you can enroll again from scratch.
 - **Benchmark:** the Benchmark tab runs on the CMU keystroke dataset and draws an ROC curve, an enrollment curve, and per-subject EER numbers.
-- **Keep it simple:** the Try it tab is just two steps, the password box and the verdict. Charts, scores and settings live in How it works.
+- **Keep it simple:** the Try it tab is just two steps, the password box, the verdict and Reset. How it works is a plain six-step walkthrough of what happens behind the scenes, written for someone with no background.
 
 ---
 

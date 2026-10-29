@@ -1,7 +1,8 @@
 // node test_e2e.js — browser tests with Playwright + Chromium (not part of `npm test`; needs `npm i -D playwright`).
 // Phone (375×667, touch, DPR 2): real touch input via CDP, keypad attempt -> 31 + 22 features, multi-touch, wrong key,
 // enroll + verify, canvas DPR + resize, touch targets, no horizontal overflow.
-// Desktop (1440×900): keyboard attempt -> 31 features, forced keypad with separate profile. Writes docs/screenshots/*.png.
+// Desktop (1440×900): keyboard attempt -> 31 features, Reset on Try it and How it works, plain How it works walkthrough.
+// Writes docs/screenshots/*.png.
 'use strict';
 const path = require('path');
 const fs = require('fs');
@@ -80,7 +81,7 @@ async function tapAttempt(page, t, sel, opts) {
 }
 async function targets(page, scope) {
   return page.evaluate((scope) => {
-    const sel = 'button:not(.kp-key):not([disabled]),[role=tab],select,summary,.switch,.consent label,input[type=range],.kp-key';
+    const sel = 'button:not(.kp-key):not([disabled]),[role=tab],select,summary,input[type=range],.kp-key';
     return [...document.querySelectorAll(scope + ' ' + sel + ',' + sel.split(',').map((s) => 'header ' + s).join(','))]
       .filter((el) => { const r = el.getBoundingClientRect(); return r.width && r.height && !el.closest('[hidden]'); })
       .map((el) => { const r = el.getBoundingClientRect(); return { el: (el.id || el.className || el.tagName) + ':' + (el.textContent || '').trim().slice(0, 16), w: r.width, h: r.height }; })
@@ -98,7 +99,6 @@ async function targets(page, scope) {
   const cdp = await ctx.newCDPSession(page), t = toucher(cdp);
   check('keypad shown, text field hidden', await page.isVisible('#keypad') && !(await page.isVisible('#pass')));
   check('phone profile selected', (await page.evaluate(() => KeyPrint.device())) === 'mobile');
-  check('not marked as testing on a touch device', !(await page.isVisible('#mode-note')));
   const small = await targets(page, '#view-try');
   check('touch targets ≥ 44 px (Try it)', small.length === 0, JSON.stringify(small.slice(0, 6)));
   const keySize = await page.evaluate(() => { const r = document.querySelector('#keypad [data-k="t"]').getBoundingClientRect(); return [r.width, r.height]; });
@@ -112,7 +112,7 @@ async function targets(page, scope) {
   // wrong key resets + counter
   await t.down(1, ...(await (async () => { const b = (await keyBoxes(page, '#keypad'))['.']; return [b.x + b.w / 2, b.y + b.h / 2]; })())); await sleep(50); await t.up(1);
   const bi = (await keyBoxes(page, '#keypad')).i; await t.down(2, bi.x + bi.w / 2, bi.y + bi.h / 2); await sleep(50); await t.up(2);
-  check('wrong key discards and counts', (await page.textContent('#rejects')).trim() === '1 discarded' && /Wrong key/.test(await page.textContent('#status')));
+  check('wrong key discards and counts', /Wrong key.*\(1 this session\)/.test(await page.textContent('#status')));
 
   // a full attempt with known tap offsets and two overlapping pairs
   const OFF = (i) => [((i % 5) - 2) * 0.1, i % 2 ? -0.2 : 0.2];
@@ -131,8 +131,7 @@ async function targets(page, scope) {
   for (let k = 1; k < 10; k++) await tapAttempt(page, t, '#keypad', { id0: 100 * k, off: (i) => [0.05 * Math.sin(i + k), 0.1] });
   check('10 keypad samples -> trained phone profile', await page.evaluate(() => KeyPrint.trained() && KeyPrint.samples() === 10));
   await tapAttempt(page, t, '#keypad', { id0: 5000, off: () => [0, 0.1] });
-  check('verify attempt gives a verdict', /ACCEPT|REJECT/.test(await page.textContent('#overall')));
-  check('deviation table names position features sensibly', !/undefined/.test(await page.textContent('#devs')));
+  check('verify attempt gives a verdict', /Accepted|Rejected/.test(await page.textContent('#status')));
   await page.screenshot({ path: path.join(SHOTS, 'mobile-375.png') });
   await page.screenshot({ path: path.join(SHOTS, 'mobile-375-full.png'), fullPage: true });
   const prof = await page.evaluate(() => { return JSON.parse(localStorage.getItem('keyprint.profile.mobile.v1')); });
@@ -167,26 +166,34 @@ async function targets(page, scope) {
   }
   const xd = await page.evaluate(() => KeyPrint.lastVector());
   check('keyboard attempt -> 31 features', xd && xd.length === 31, xd && xd.length);
-  await page.evaluate(() => document.getElementById('load-example').click()); await sleep(100);
-  check('desktop profile trained (synthetic example)', await page.evaluate(() => KeyPrint.trained() && KeyPrint.device() === 'desktop'));
-  await page.screenshot({ path: path.join(SHOTS, 'desktop-1440.png') });
-  // force keypad (switch lives on the How it works tab): clearly labelled, separate profile, mouse taps give 53 features
-  await page.click('#tab-how'); await sleep(120);
-  await page.click('label.switch');
-  check('forced keypad labelled as testing', await page.isVisible('#mode-note') && /forced/.test(await page.textContent('#mode-badge')));
-  check('switching to keypad loads the (empty) phone profile', await page.evaluate(() => KeyPrint.device() === 'mobile' && KeyPrint.samples() === 0 && !KeyPrint.trained()));
-  await page.click('#tab-try'); await sleep(120);
-  check('Try tab shows only steps, input and message', await page.evaluate(() => [...document.querySelectorAll('#view-try .stage > *')].filter((el) => el.getBoundingClientRect().height && !el.classList.contains('sr-only')).map((el) => el.id || el.className).join(',') === 'steps,keypad,status'));
+  check('Try tab shows only steps, input, message and Reset', await page.evaluate(() => [...document.querySelectorAll('#view-try .stage > *')].filter((el) => el.getBoundingClientRect().height && !el.classList.contains('sr-only')).map((el) => el.id || el.className).join(',') === 'steps,pass,status,stage-foot'));
   check('no third step', !(await page.$('#step-friend')));
-  const bx = await keyBoxes(page, '#keypad');
-  for (const k of PASS) { const b = bx[k]; await page.mouse.move(b.x + b.w / 2, b.y + b.h / 2); await page.mouse.down(); await sleep(50); await page.mouse.up(); await sleep(50); }
-  check('mouse on forced keypad -> 53 features', (await page.evaluate(() => KeyPrint.lastVector().length)) === 53);
-  await page.screenshot({ path: path.join(SHOTS, 'desktop-1440-keypad.png') });
-  const imported = await page.evaluate(() => { document.getElementById('json-box').value = JSON.stringify({ app: 'KeyPrint', samples: [] }); document.getElementById('import-text').click(); return document.getElementById('pr-status').textContent; });
-  check('a keyboard profile is refused while on the keypad', /keyboard\) profile|keyboard profile/.test(imported), imported);
+  // a saved synthetic profile loads as trained
+  await page.evaluate(() => localStorage.setItem('keyprint.profile.v2', JSON.stringify({ app: 'KeyPrint', device: 'desktop', samples: KP.syntheticProfileSamples(7, 10), frr: 0.05 })));
+  await page.reload(); await sleep(150);
+  check('desktop profile trained (synthetic example)', await page.evaluate(() => KeyPrint.trained() && KeyPrint.device() === 'desktop'));
+  check('Verify step open once trained', await page.evaluate(() => !document.getElementById('step-verify').disabled));
+  await page.screenshot({ path: path.join(SHOTS, 'desktop-1440.png') });
+
+  // Reset on Try it: first click arms, second clears
+  await page.click('#reset');
+  check('Reset asks for a second tap', /again/.test(await page.textContent('#reset')) && (await page.evaluate(() => KeyPrint.samples())) === 10);
+  await page.click('#reset');
+  check('Reset clears the profile and returns to step 1', await page.evaluate(() => KeyPrint.samples() === 0 && !KeyPrint.trained() &&
+    document.getElementById('step-verify').disabled && document.getElementById('step-enroll-sub').textContent === '0/10' &&
+    JSON.parse(localStorage.getItem('keyprint.profile.v2')).samples.length === 0));
+  check('Reset button label restored', (await page.textContent('#reset')).trim() === 'Reset');
+
+  // How it works: plain walkthrough only, plus its own Reset
   await page.click('#tab-how'); await sleep(120);
-  await page.click('label.switch');
-  check('switching back restores the desktop profile', await page.evaluate(() => KeyPrint.device() === 'desktop' && KeyPrint.trained()));
+  check('How it works is a 6-step walkthrough', (await page.$$('#view-how .walk > li')).length === 6);
+  check('old session panels are gone', await page.evaluate(() => ['timeline', 'rhythm', 'overall', 'verdicts', 'devs', 'tally', 'force-keypad', 'thr-table', 'test-out', 'export'].every((id) => !document.getElementById(id))));
+  await page.screenshot({ path: path.join(SHOTS, 'desktop-1440-how.png'), fullPage: true });
+  await page.evaluate(() => localStorage.setItem('keyprint.profile.v2', JSON.stringify({ app: 'KeyPrint', device: 'desktop', samples: KP.syntheticProfileSamples(8, 10), frr: 0.05 })));
+  await page.reload(); await sleep(150);
+  check('reload remembers the How it works tab', await page.isVisible('#how-reset'));
+  await page.click('#how-reset'); await page.click('#how-reset'); await sleep(120);
+  check('How it works Reset clears the profile and opens Try it', await page.evaluate(() => KeyPrint.samples() === 0 && !document.getElementById('view-try').hidden));
   check('no JS errors (desktop)', errors.length === 0, errors.join(' | '));
   await ctx.close();
   await browser.close();
