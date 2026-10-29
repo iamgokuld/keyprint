@@ -27,7 +27,7 @@ Passwords check what you typed. KeyPrint checks how long you held each key, how 
 - **Create your password:** the first thing you do. It needs at least 8 characters, a capital letter, a number and a special character, and the rules tick off as you type. You also write your own security question and answer. Only salted hashes (PBKDF2-SHA-256) of the password and the answer are stored, in this browser.
 - **Enroll:** type your password ten times so KeyPrint learns your rhythm. A wrong password is not counted.
 - **Verify:** type it once more and three detectors vote on whether it is really you. Hand the keyboard to a friend and watch it turn them down.
-- **Security question:** if the right password is rejected on rhythm, you can answer your question to get in, and then retrain on how you type now.
+- **Is it really you?:** the Verify step shows an "Is it really you?" link until a try is accepted. It opens your security question as a backup: answer it to get in, and then retrain on how you type now.
 - **Phone mode:** on a phone, an on-screen keyboard (letters, Shift, numbers and symbols) records where your thumb lands, not just when.
 - **Reset:** a Reset button on the Enroll step of Try it wipes your password, question and profile so you can start again with a new password. It is hidden during Verify.
 - **Detectors:** the Detectors tab explains the three detectors in plain language, each with a small worked example (real numbers from the real code), and shows how the 2-of-3 vote decides the verdict.
