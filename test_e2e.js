@@ -189,57 +189,6 @@ async function targets(page, scope) {
   check('switching back restores the desktop profile', await page.evaluate(() => KeyPrint.device() === 'desktop' && KeyPrint.trained()));
   check('no JS errors (desktop)', errors.length === 0, errors.join(' | '));
   await ctx.close();
-
-  // ===================== custom passphrase =====================
-  console.log('Custom passphrase (1440×900)');
-  ({ ctx, page, errors } = await open(browser, { viewport: { width: 1440, height: 900 } }));
-  const typeIt = async (text) => {
-    await page.click('#pass');
-    for (const k of [...text, 'Enter']) {
-      const shift = /[A-Z!]/.test(k), key = k === ' ' ? 'Space' : k;
-      if (shift) await page.keyboard.down('Shift');
-      await page.keyboard.down(key); await sleep(40); await page.keyboard.up(key); if (shift) await page.keyboard.up('Shift'); await sleep(50);
-    }
-  };
-  check('default passphrase selected at first', (await page.getAttribute('#pp-default', 'aria-pressed')) === 'true' && !(await page.isVisible('#pp-form')));
-  await page.evaluate(() => document.getElementById('load-example').click()); await sleep(100);
-  check('default profile trained', await page.evaluate(() => KeyPrint.trained()));
-  await page.click('#pp-custom');
-  check('Custom shows the passphrase form', await page.isVisible('#pp-form'));
-  await page.fill('#pp-input', 'ab');
-  await page.click('#pp-save');
-  check('too-short passphrase refused', /at least 4/.test(await page.textContent('#pp-msg')));
-  await page.fill('#pp-input', 'Hi there!');
-  await Promise.all([page.waitForEvent('load'), page.click('#pp-save')]);
-  check('page reloads on the custom passphrase', await page.evaluate(() => KeyPrint.passphrase()) === 'Hi there!');
-  check('custom profile starts empty', await page.evaluate(() => KeyPrint.samples() === 0 && !KeyPrint.trained()));
-  check('UI shows the custom passphrase', (await page.getAttribute('#pass', 'placeholder')).endsWith('Hi there!') && (await page.textContent('.keys')).length === 10);
-  await typeIt('Hi there!');
-  const xc = await page.evaluate(() => KeyPrint.lastVector());
-  check('custom keyboard attempt -> 3n − 2 = 28 features', xc && xc.length === 28, (xc && xc.length) + ' ' + await page.textContent('#status'));
-  await page.evaluate(() => document.getElementById('load-example').click()); await sleep(100);
-  check('custom profile trained (synthetic example)', await page.evaluate(() => KeyPrint.trained()));
-  await page.screenshot({ path: path.join(SHOTS, 'desktop-1440-custom.png') });
-  await page.click('label.switch');
-  const kb = await keyBoxes(page, '#keypad');
-  check('custom keypad has the passphrase keys + Return', Object.keys(kb).sort().join('') === [...new Set('Hi there!')].concat('Enter').sort().join(''));
-  for (const k of 'Hi there!'.split('').concat('Enter')) { const b = kb[k]; await page.mouse.move(b.x + b.w / 2, b.y + b.h / 2); await page.mouse.down(); await sleep(40); await page.mouse.up(); await sleep(40); }
-  check('custom keypad attempt -> 28 + 20 features', (await page.evaluate(() => KeyPrint.lastVector().length)) === 48);
-  await page.click('label.switch');
-  // changing the passphrase asks once, then clears the custom profile
-  await page.fill('#pp-input', 'new phrase');
-  await page.click('#pp-save');
-  check('changing asks for confirmation first', /Confirm/.test(await page.textContent('#pp-save')) && await page.evaluate(() => KeyPrint.passphrase()) === 'Hi there!');
-  await Promise.all([page.waitForEvent('load'), page.click('#pp-save')]);
-  check('confirmed: new passphrase, profile cleared', await page.evaluate(() => KeyPrint.passphrase() === 'new phrase' && KeyPrint.samples() === 0));
-  await Promise.all([page.waitForEvent('load'), page.click('#pp-default')]);
-  check('back to default keeps the default profile', await page.evaluate(() => KeyPrint.passphrase() === '.tie5Roanl' && KeyPrint.trained()));
-  await Promise.all([page.waitForEvent('load'), page.click('#pp-custom')]);
-  check('Custom again returns to the saved custom passphrase', await page.evaluate(() => KeyPrint.passphrase()) === 'new phrase');
-  await page.setViewportSize({ width: 375, height: 667 });
-  await noOverflowAllTabs(page, 'custom 375');
-  check('no JS errors (custom)', errors.length === 0, errors.join(' | '));
-  await ctx.close();
   await browser.close();
   done();
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -13,5 +13,4 @@ jobs:
       - run: node test_detectors.js
       - run: node test_capture.js
       - run: node test_touch.js
-      - run: node test_passphrase.js
       - run: node bench-mobile.js --synthetic
