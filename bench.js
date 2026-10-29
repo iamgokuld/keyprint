@@ -2,11 +2,10 @@
 // Reproduce the CMU benchmark with the exact detector code that ships in index.html.
 //   ./scripts/get-data.sh                      # downloads DSL-StrongPasswordData.csv (not committed)
 //   node bench.js DSL-StrongPasswordData.csv   # prints the tables, writes bench-results.json (~25 s)
-//   node bench.js DSL-StrongPasswordData.csv --embed   # also refreshes the results embedded in index.html
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { HTML, load } = require('./test_util');
+const { load } = require('./test_util');
 const { KPB } = load('KP-DETECTORS', 'KP-BENCH');
 
 const args = process.argv.slice(2);
@@ -47,9 +46,3 @@ const json = JSON.stringify(res);
 fs.writeFileSync(path.join(__dirname, 'bench-results.json'), json + '\n');
 console.log('\nWrote bench-results.json (' + (json.length / 1024).toFixed(0) + ' KB) in ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s');
 
-if (args.includes('--embed')) {
-  const re = /(<script type="application\/json" id="kp-bench-results">)[\s\S]*?(<\/script>)/;
-  if (!re.test(HTML)) throw new Error('kp-bench-results script not found in index.html');
-  fs.writeFileSync(path.join(__dirname, 'index.html'), HTML.replace(re, (_, a, b) => a + json + b));
-  console.log('Updated the results embedded in index.html');
-}

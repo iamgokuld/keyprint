@@ -28,7 +28,7 @@ Passwords check what you typed. KeyPrint checks how long you held each key, how 
 - **Verify:** type it once more and three detectors vote on whether it is really you. Hand the keyboard to a friend and watch it turn them down.
 - **Phone mode:** on a phone, an on-screen keypad records where your thumb lands, not just when.
 - **Reset:** a Reset button on the Enroll step of Try it clears your profile so you can enroll again from scratch. It is hidden during Verify.
-- **Benchmark:** the Benchmark tab runs on the CMU keystroke dataset and draws an ROC curve, an enrollment curve, and per-subject EER numbers.
+- **Detectors:** the Detectors tab explains the three detectors in plain language, each with a small worked example (real numbers from the real code), and shows how the 2-of-3 vote decides the verdict.
 - **Keep it simple:** the Try it tab is just two steps, the password box, the verdict, Reset (Enroll only) and the passphrase to type at the bottom. How it works is a plain six-step walkthrough of what happens behind the scenes, written for someone with no background.
 
 ---
