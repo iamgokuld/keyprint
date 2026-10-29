@@ -2,7 +2,7 @@
 
 [![Try KeyPrint live](https://img.shields.io/badge/%E2%96%B6%20Try%20KeyPrint%20live-7c3aed?style=for-the-badge&logo=github)](https://iamgokuld.github.io/keyprint/)
 
-**Your password is public. Your rhythm isn't.** KeyPrint learns how you type a passphrase and turns down anyone else who types the same one, even when they get every letter right.
+**Someone can learn your password. Not your rhythm.** KeyPrint learns how you type your own password and turns down anyone else who types the same one, even when they get every letter right.
 
 **Live site:** [https://iamgokuld.github.io/keyprint/](https://iamgokuld.github.io/keyprint/)
 
@@ -24,12 +24,14 @@ Passwords check what you typed. KeyPrint checks how long you held each key, how 
 
 ## What you can do
 
-- **Enroll:** type the passphrase `.tie5Roanl` ten times so KeyPrint learns your rhythm.
+- **Create your password:** the first thing you do. It needs at least 8 characters, a capital letter, a number and a special character, and the rules tick off as you type. You also write your own security question and answer. Only salted hashes (PBKDF2-SHA-256) of the password and the answer are stored, in this browser.
+- **Enroll:** type your password ten times so KeyPrint learns your rhythm. A wrong password is not counted.
 - **Verify:** type it once more and three detectors vote on whether it is really you. Hand the keyboard to a friend and watch it turn them down.
-- **Phone mode:** on a phone, an on-screen keypad records where your thumb lands, not just when.
-- **Reset:** a Reset button on the Enroll step of Try it clears your profile so you can enroll again from scratch. It is hidden during Verify.
+- **Security question:** if the right password is rejected on rhythm, you can answer your question to get in, and then retrain on how you type now.
+- **Phone mode:** on a phone, an on-screen keyboard (letters, Shift, numbers and symbols) records where your thumb lands, not just when.
+- **Reset:** a Reset button on the Enroll step of Try it wipes your password, question and profile so you can start again with a new password. It is hidden during Verify.
 - **Benchmark:** the Benchmark tab runs on the CMU keystroke dataset and draws an ROC curve, an enrollment curve, and per-subject EER numbers.
-- **Keep it simple:** the Try it tab is just two steps, the password box, the verdict, Reset (Enroll only) and the passphrase to type at the bottom. How it works is a plain six-step walkthrough of what happens behind the scenes, written for someone with no background.
+- **Keep it simple:** the Try it tab is the password setup, then just two steps, the password box, the verdict and Reset (Enroll only). How it works is a plain seven-step walkthrough of what happens behind the scenes, written for someone with no background.
 
 ---
 
@@ -37,7 +39,7 @@ Passwords check what you typed. KeyPrint checks how long you held each key, how 
 
 > **Friend 1:** "Let me log in on your laptop."
 >
-> **Friend 2:** "Sure, the passphrase is `.tie5Roanl`."
+> **Friend 2:** "Sure, my password is `Tr0ub4dor!`."
 >
 > **Friend 1:** "Got it. Oh, it's asking me to type it ten times first."
 >

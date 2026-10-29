@@ -1,10 +1,11 @@
-// node test_touch.js — keypad capture (KP-TOUCH block in index.html): 31 + 22 features, multi-touch, spoil rules,
-// detectors on 53-dim vectors, synthetic volunteers.
+// node test_touch.js — keypad capture (KP-TOUCH block in index.html): timing + position features for any password,
+// the full on-screen keyboard, multi-touch, spoil rules, detectors on 53-dim vectors, synthetic volunteers.
 'use strict';
 const { load, check, done } = require('./test_util');
-const { KP, KPB, KPT } = load('KP-DETECTORS', 'KP-BENCH', 'KP-TOUCH');
+const { KP, KPB, KPT, KPS } = load('KP-DETECTORS', 'KP-BENCH', 'KP-TIMING', 'KP-TOUCH', 'KP-SECRET');
 
-const KEYS = KP.EXPECTED_KEYS;
+const PW = 'Tr0ub4dor!';   // 10 characters + Return = 11 keys
+const KEYS = PW.split('').concat('Enter');
 /** A clean keypad attempt: key i down at start + 200i ms, held 90 ms, pointer ids 1..11, offsets by key index. */
 function clean(start, opts) {
   opts = opts || {};
@@ -21,10 +22,17 @@ const complete = (res) => res.filter((r) => r.type === 'complete');
 const near = (a, b) => Math.abs(a - b) < 1e-9;
 
 console.log('Feature layout');
-check('53 = 31 timing + 22 position', KPT.DIM === 53 && KPT.TIMING_DIM === 31 && KPT.POS_NAMES.length === 22);
-check('timing names unchanged, position after', KPT.FEATURE_NAMES.slice(0, 31).join() === KP.FEATURE_NAMES.join() &&
+check('CMU layout (synthetic volunteers): 53 = 31 timing + 22 position', KPT.DIM === 53 && KPT.TIMING_DIM === 31 && KPT.POS_NAMES.length === 22);
+check('CMU timing names unchanged, position after', KPT.FEATURE_NAMES.slice(0, 31).join() === KP.FEATURE_NAMES.join() &&
   KPT.FEATURE_NAMES[31] === 'X.period' && KPT.FEATURE_NAMES[32] === 'Y.period' && KPT.FEATURE_NAMES[52] === 'Y.Return');
-check('keypad has exactly the 11 passphrase keys', KPT.KEYPAD_ROWS.flat().sort().join() === KEYS.slice().sort().join());
+check('names for n keys: 3n − 2 timings + 2n positions', KPT.featureNames(9).length === 25 + 18 && KPT.featureNames(9)[25] === 'X.k1' && KPT.featureNames(9)[42] === 'Y.Return');
+check('timingOnly works for any length', KPT.timingOnly(new Array(43).fill(0)).length === 25 && KPT.timingOnly(new Array(53).fill(0)).length === 31);
+const typeable = Object.values(KPT.LAYERS).flat(2).filter((k) => !KPT.CONTROL[k] && k !== 'Backspace' && k !== 'Enter');
+let ascii = ''; for (let c = 32; c < 127; c++) ascii += String.fromCharCode(c);
+check('keyboard can type every character a valid password may use (printable ASCII)', ascii.split('').every((ch) => typeable.includes(ch)),
+  ascii.split('').filter((ch) => !typeable.includes(ch)).join(''));
+check('every keyboard character is allowed in a password', typeable.every((ch) => !KPS.checkPassword('Aa1!aaaa' + ch).badChar));
+check('each layer has Return and Backspace', Object.values(KPT.LAYERS).every((l) => l.flat().includes('Enter') && l.flat().includes('Backspace')));
 const o = KPT.offset(130, 260, { left: 100, top: 200, width: 60, height: 80 });
 check('offset normalised to key size', near(o.dx, 0) && near(o.dy, 0.25));
 check('offset at the right edge = +0.5', near(KPT.offset(160, 240, { left: 100, top: 200, width: 60, height: 80 }).dx, 0.5));
@@ -34,6 +42,7 @@ console.log('Clean attempt');
   const cap = KPT.createTapCapture();
   const c = complete(feed(cap, clean(5000.5)));
   check('one complete attempt', c.length === 1);
+  check('typed text handed back without Return', c[0].typed === PW);
   const x = c[0].x;
   check('53 features out', x.length === 53 && x.every(Number.isFinite));
   check('H / DD / UD from pointer timestamps (s)', near(x[0], 0.09) && near(x[1], 0.2) && near(x[2], 0.11));
@@ -59,16 +68,17 @@ console.log('Multi-touch');
 console.log('Rules');
 {
   const cap = KPT.createTapCapture();
-  check('stray before "." ignored', cap.down({ key: 't', id: 9, timeStamp: 1, dx: 0, dy: 0 }).type === 'stray' && cap.attempt() === null);
-  cap.down({ key: '.', id: 1, timeStamp: 10, dx: 0, dy: 0 });
-  const s = cap.down({ key: 'i', id: 2, timeStamp: 20, dx: 0, dy: 0 });
-  check('wrong key spoils + counts', s.type === 'spoil' && s.reason === 'typo' && s.want === 't' && s.rejects === 1 && cap.attempt() === null);
+  check('Return or Backspace with nothing typed is stray', cap.down({ key: 'Enter', id: 9, timeStamp: 1, dx: 0, dy: 0 }).type === 'stray' &&
+    cap.down({ key: 'Backspace', id: 8, timeStamp: 2, dx: 0, dy: 0 }).type === 'stray' && cap.attempt() === null);
+  cap.down({ key: 'T', id: 1, timeStamp: 10, dx: 0, dy: 0 });
+  const s = cap.down({ key: 'Backspace', id: 2, timeStamp: 20, dx: 0, dy: 0 });
+  check('Backspace spoils + counts', s.type === 'spoil' && s.reason === 'backspace' && s.rejects === 1 && cap.attempt() === null);
   check('release of a spoiled tap ignored', cap.up({ id: 1, timeStamp: 30 }).type === 'ignore');
-  cap.down({ key: '.', id: 3, timeStamp: 40, dx: 0, dy: 0 });
+  cap.down({ key: 'T', id: 3, timeStamp: 40, dx: 0, dy: 0 });
   const c = cap.interrupt('cancel');
   check('pointercancel spoils a started attempt', c.type === 'spoil' && c.reason === 'cancel' && cap.rejects() === 2);
   check('interrupt with no attempt is ignored', cap.interrupt('hidden').type === 'ignore' && cap.rejects() === 2);
-  // taps after all 11 are down are ignored (Return still held)
+  // taps after Return are ignored (Return still held)
   const cap2 = KPT.createTapCapture(), ev = clean(0);
   const retUp = ev.pop();
   const res = feed(cap2, ev);
@@ -76,8 +86,12 @@ console.log('Rules');
   check('then completes', complete(res).length === 0 && cap2.up(retUp.e).type === 'complete');
   // the same pointer id pressing again before release is ignored
   const cap3 = KPT.createTapCapture();
-  cap3.down({ key: '.', id: 1, timeStamp: 0, dx: 0, dy: 0 });
-  check('duplicate pointerdown id ignored', cap3.down({ key: 't', id: 1, timeStamp: 5, dx: 0, dy: 0 }).type === 'ignore');
+  cap3.down({ key: 'T', id: 1, timeStamp: 0, dx: 0, dy: 0 });
+  check('duplicate pointerdown id ignored', cap3.down({ key: 'r', id: 1, timeStamp: 5, dx: 0, dy: 0 }).type === 'ignore');
+  const cap4 = KPT.createTapCapture(), ev4 = [];
+  'Ab1!xyz?'.split('').concat('Enter').forEach((k, i) => { ev4.push({ kind: 'down', e: { key: k, id: i + 1, timeStamp: i * 150, dx: 0, dy: 0 } }, { kind: 'up', e: { id: i + 1, timeStamp: i * 150 + 80 } }); });
+  const c4 = complete(feed(cap4, ev4));
+  check('8-character password -> 25 + 18 features', c4.length === 1 && c4[0].x.length === 43 && c4[0].typed === 'Ab1!xyz?');
 }
 
 console.log('Detectors on 53-dim vectors');

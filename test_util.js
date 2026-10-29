@@ -15,7 +15,7 @@ function block(name) {
 
 /** Evaluate blocks in one sandbox and return its globals (KP, KPC, KPB). */
 function load(...names) {
-  const ctx = vm.createContext({ console });
+  const ctx = vm.createContext({ console, TextEncoder });
   names.forEach((n) => vm.runInContext(block(n).replace(/if \(typeof module[^\n]*\n/, ''), ctx, { filename: 'index.html#' + n }));
   return ctx;
 }

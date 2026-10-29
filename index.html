@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="KeyPrint: keystroke-dynamics demo. Train the page on your typing rhythm; it rejects anyone else typing the same passphrase. Runs entirely in your browser.">
+<meta name="description" content="KeyPrint: keystroke-dynamics demo. Create your own password, train the page on your typing rhythm; it rejects anyone else typing the same password. Runs entirely in your browser.">
 <!--ARTIFACT-START-->
 <title>KeyPrint</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -169,15 +169,22 @@ button,a,label,summary,select,input{touch-action:manipulation}
 /* on-screen keypad: no selection, no callout, no double-tap zoom, no scroll stealing the pointer */
 .keypad{display:grid;gap:8px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--bg);
   touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;max-width:520px;width:100%;margin:0 auto}
-.keypad .kr{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
-.keypad .kr.ret{grid-template-columns:minmax(0,1fr)}
+.kp-layer{display:grid;gap:8px}
+.kp-layer[hidden]{display:none}
+.keypad .kr{display:flex;gap:5px;justify-content:center}
 /* keys use touch-action:none so a small finger slide never turns into a pan + pointercancel */
 .kp-key{position:relative;touch-action:none;min-height:56px;min-width:44px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);
   font:700 22px var(--font-mono);display:grid;place-items:center;cursor:pointer;padding:0;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
   box-shadow:0 1px 0 var(--line);transition:background .06s,transform .06s}
 .kp-key.down{background:var(--accent);color:var(--surface);border-color:var(--accent);transform:translateY(1px)}
 .kp-key.ret{font-size:16px;letter-spacing:.06em}
-.kp-key .tap{position:absolute;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--bad);opacity:.85;pointer-events:none}
+/* full keyboard rows: up to 10 keys share the width, so keys are narrower than 44 px but at least 48 px tall */
+.keypad .kp-key{flex:1 1 0;min-width:0;max-width:56px;min-height:48px;padding:0;font-size:19px}
+.keypad .kp-key.fn{flex-grow:1.5;max-width:84px;background:var(--line);font-size:17px}
+.keypad .kp-key.fn.on{background:var(--accent);color:var(--surface)}
+.keypad .kp-key.space{flex-grow:4;max-width:none;font-size:14px;color:var(--muted)}
+.keypad .kp-key.ret{flex-grow:2;max-width:110px;background:var(--accent-soft);color:var(--accent)}
+@media (max-width:520px){.keypad{padding:6px;gap:6px}.kp-layer{gap:6px}.keypad .kr{gap:3px}.try .stage{padding:16px 12px}}
 @media (orientation:landscape) and (max-height:500px){.kp-key{min-height:44px;font-size:18px}.keypad{max-width:640px;gap:6px;padding:8px}.keypad .kr{gap:6px}}
 </style>
 <style>
@@ -203,10 +210,35 @@ h2{font-size:12px;letter-spacing:.14em}
 #pass::placeholder{font-family:var(--font-body);font-size:15px;letter-spacing:.01em;color:var(--muted)}
 .try .status{font-family:var(--font-display);font-size:19px;line-height:1.45;text-align:center;color:var(--ink);min-height:2.9em;text-wrap:balance}
 .try .status.ok{color:var(--ok)} .try .status.bad{color:var(--bad)}
-/* Try it: reset (Enroll only) sits under the message, the passphrase at the very bottom */
+/* Try it: reset (Enroll only) and the security-question backup sit under the message */
 .stage-foot{display:flex;justify-content:center}
-.phrase{margin:0;padding-top:16px;border-top:1px solid var(--line);text-align:center;color:var(--muted)}
-.phrase .mono{color:var(--ink);font-size:20px;letter-spacing:.04em;margin-left:6px}
+.capture{display:grid;gap:20px}
+/* set up: own password + security question */
+.setup{display:grid;gap:18px}
+.setup-head{display:grid;gap:4px;text-align:center}
+.setup-head h3{margin:0;font-family:var(--font-display);font-size:24px;font-weight:600;letter-spacing:-.015em}
+.setup-head p{margin:0;color:var(--muted)}
+.field{display:grid;gap:6px}
+.field>label{font-weight:600}
+.field .opt{font-weight:400;color:var(--muted)}
+.setup input[type=password],.setup input[type=text],.recover input{font:inherit;font-size:17px;width:100%;padding:11px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink)}
+.setup input:focus,.recover input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.setup input[aria-invalid=true]{border-color:var(--bad)}
+.field-help{margin:0;font-size:14px;color:var(--muted)}
+.field-msg{margin:0;font-size:14px;color:var(--bad)}
+.field-msg:empty{display:none}
+.rules{list-style:none;margin:2px 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 14px;font-size:14px;color:var(--muted)}
+.rules li{position:relative;padding-left:22px}
+.rules li::before{content:"○";position:absolute;left:2px;top:0}
+.rules li.met{color:var(--ok)} .rules li.met::before{content:"✓";font-weight:700}
+.rules li.unmet{color:var(--bad)} .rules li.unmet::before{content:"✗"}
+.check{display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);cursor:pointer;min-height:32px}
+.check input{width:18px;height:18px;accent-color:var(--accent)}
+#su-create{justify-self:center;min-width:160px;padding:10px 22px;font-size:15px}
+.recover{display:grid;gap:10px;justify-items:center;text-align:center}
+.recover-q{margin:0;font-family:var(--font-display);font-size:18px}
+.recover-q::before{content:"Your question: ";color:var(--muted);font-family:var(--font-body);font-size:15px}
+@media (max-width:520px){.rules{grid-template-columns:minmax(0,1fr)}}
 /* How it works: one plain walkthrough, numbered steps down a line */
 .how{max-width:720px;width:100%;margin:0 auto;display:grid;gap:28px}
 .how h3{margin:0;font-family:var(--font-display);font-size:22px;font-weight:600;letter-spacing:-.015em;line-height:1.25;text-wrap:balance;font-variation-settings:"opsz" 72}
@@ -234,7 +266,7 @@ h2{font-size:12px;letter-spacing:.14em}
   <header>
     <div class="brand">
       <h1>KeyPrint</h1>
-      <p class="tagline">Your password is public. Your rhythm isn’t.</p>
+      <p class="tagline">Someone can learn your password. Not your rhythm.</p>
     </div>
     <div class="tabs" role="tablist" aria-label="Sections">
       <button role="tab" id="tab-try" aria-selected="true" aria-controls="view-try" tabindex="0">Try it</button>
@@ -246,18 +278,59 @@ h2{font-size:12px;letter-spacing:.14em}
   <!-- ===================== TRY IT ===================== -->
   <div id="view-try" class="view try" role="tabpanel" aria-labelledby="tab-try" tabindex="-1">
   <section class="stage" aria-labelledby="cap-h">
-    <h2 id="cap-h" class="sr-only">Step 1 · Enroll: type the passphrase, then Return</h2>
-    <ol class="steps" aria-label="Demo steps">
-      <li><button id="step-enroll" aria-current="step"><b>1</b><span>Enroll</span><small id="step-enroll-sub">0/10</small></button></li>
-      <li><button id="step-verify" disabled><b>2</b><span>Verify</span><small>Is it you?</small></button></li>
-    </ol>
-    <div class="keys" id="keys" aria-hidden="true" hidden></div>
-    <label for="pass" class="sr-only">Passphrase (type .tie5Roanl then Return)</label>
-    <input id="pass" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="status" placeholder="type the passphrase below, then Return">
-    <div class="keypad" id="keypad" role="group" aria-label="On-screen keypad for .tie5Roanl and Return" hidden></div>
-    <div class="status" id="status" aria-live="polite">Start with “.”. Backspace or a wrong key discards the attempt; Esc restarts.</div>
-    <div class="stage-foot" id="reset-row"><button class="btn danger" id="reset">Reset</button></div>
-    <p class="phrase" id="phrase">Passphrase<span class="mono">.tie5Roanl</span></p>
+    <h2 id="cap-h" class="sr-only">Create your password</h2>
+    <form class="setup" id="setup" novalidate>
+      <div class="setup-head">
+        <h3>Create your password</h3>
+        <p>You will type it to train the page, so pick one you can type without looking.</p>
+      </div>
+      <div class="field">
+        <label for="su-pass">Password</label>
+        <input id="su-pass" type="password" autocomplete="new-password" autocapitalize="off" spellcheck="false" aria-describedby="su-rules su-pass-msg">
+        <ul class="rules" id="su-rules" aria-live="polite"></ul>
+        <p class="field-msg" id="su-pass-msg" aria-live="polite"></p>
+      </div>
+      <div class="field">
+        <label for="su-confirm">Type it again</label>
+        <input id="su-confirm" type="password" autocomplete="new-password" autocapitalize="off" spellcheck="false" aria-describedby="su-confirm-msg">
+        <p class="field-msg" id="su-confirm-msg" aria-live="polite"></p>
+        <label class="check"><input type="checkbox" id="su-show"> Show password</label>
+      </div>
+      <div class="field">
+        <label for="su-q">Security question <span class="opt">(you write it)</span></label>
+        <input id="su-q" type="text" maxlength="120" autocomplete="off" placeholder="e.g. What was my first bike called?" aria-describedby="su-q-help su-q-msg">
+        <p class="field-help" id="su-q-help">If the page ever rejects your rhythm, answering this lets you back in.</p>
+        <p class="field-msg" id="su-q-msg" aria-live="polite"></p>
+      </div>
+      <div class="field">
+        <label for="su-a">Answer</label>
+        <input id="su-a" type="password" maxlength="120" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="su-a-help su-a-msg">
+        <p class="field-help" id="su-a-help">Capitals and extra spaces do not matter.</p>
+        <p class="field-msg" id="su-a-msg" aria-live="polite"></p>
+      </div>
+      <button class="btn primary" id="su-create" type="submit">Create</button>
+      <p class="field-msg" id="su-error" aria-live="polite"></p>
+    </form>
+    <div class="capture" id="capture" hidden>
+      <ol class="steps" aria-label="Demo steps">
+        <li><button id="step-enroll" aria-current="step"><b>1</b><span>Enroll</span><small id="step-enroll-sub">0/10</small></button></li>
+        <li><button id="step-verify" disabled><b>2</b><span>Verify</span><small>Is it you?</small></button></li>
+      </ol>
+      <label for="pass" class="sr-only">Your password, then Return</label>
+      <input id="pass" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="status" placeholder="type your password, then Return">
+      <div class="keypad" id="keypad" role="group" aria-label="On-screen keyboard" hidden></div>
+    </div>
+    <div class="status" id="status" aria-live="polite">First, create your own password and a security question.</div>
+    <div class="stage-foot" id="recover-row" hidden><button class="btn" id="recover-open" type="button">It is me: answer my security question</button></div>
+    <form class="recover" id="recover" hidden>
+      <p class="recover-q" id="recover-q"></p>
+      <label for="recover-a" class="sr-only">Your answer</label>
+      <input id="recover-a" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="your answer" aria-describedby="recover-msg">
+      <button class="btn primary" id="recover-check" type="submit">Check answer</button>
+      <p class="field-msg" id="recover-msg" aria-live="polite"></p>
+    </form>
+    <div class="stage-foot" id="retrain-row" hidden><button class="btn primary" id="retrain" type="button">Retrain my rhythm</button></div>
+    <div class="stage-foot" id="reset-row" hidden><button class="btn danger" id="reset">Reset</button></div>
   </section>
   </div><!-- /view-try -->
 
@@ -339,8 +412,8 @@ h2{font-size:12px;letter-spacing:.14em}
 
     <ol class="walk">
       <li>
-        <h3>Everyone types the same password</h3>
-        <p>The password is <span class="mono">.tie5Roanl</span>, then Return. It is printed right on the page, so it is not a secret. The page does not care much <em>what</em> you type. It cares <em>how</em> you type it.</p>
+        <h3>You make your own password</h3>
+        <p>First you create a password: at least 8 characters, with a capital letter, a number and a special character such as <span class="mono">!</span> or <span class="mono">#</span>. You also write your own security question and its answer. The page keeps only scrambled versions (salted hashes) of the password and the answer, so the words themselves are never stored. Getting the password right is only half of it: the page also cares <em>how</em> you type it.</p>
       </li>
       <li>
         <h3>The page times every key</h3>
@@ -357,11 +430,11 @@ h2{font-size:12px;letter-spacing:.14em}
           <li><strong>Hold:</strong> how long each key stays pressed.</li>
           <li><strong>Gap:</strong> how long you wait between one key and the next.</li>
         </ul>
-        <p>One full password gives 31 of these timings. On a phone, the page shows its own keypad and also notes where your finger lands on each key.</p>
+        <p>Every key gives about three timings, so an 8-character password plus Return gives 25 of them, and a longer password gives more. On a phone, the page shows its own keyboard and also notes where your finger lands on each key.</p>
       </li>
       <li>
         <h3>You enroll by typing it 10 times</h3>
-        <p>In step 1 (Enroll) you type the password 10 times at your normal speed. A typo, Backspace or wrong key throws that try away, and you simply type it again. Only clean tries count.</p>
+        <p>In step 1 (Enroll) you type your password 10 times at your normal speed. Backspace throws that try away, and a wrong password is not counted, so you simply type it again. Only clean, correct tries count.</p>
       </li>
       <li>
         <h3>The page learns your rhythm</h3>
@@ -369,17 +442,21 @@ h2{font-size:12px;letter-spacing:.14em}
       </li>
       <li>
         <h3>Verify compares a new try with your profile</h3>
-        <p>In step 2 (Verify) you type the password once more. The page measures the same 31 timings and puts them next to your profile. Three separate checks each decide “close enough” or “too different”. If at least two of them say close enough, you are <strong>accepted</strong>.</p>
+        <p>In step 2 (Verify) you type the password once more. If it is the wrong password, that is the end of it: rejected. If it is right, the page measures the same timings and puts them next to your profile. Three separate checks each decide “close enough” or “too different”. If at least two of them say close enough, you are <strong>accepted</strong>.</p>
       </li>
       <li>
         <h3>Why someone else gets rejected</h3>
-        <p>A friend can type every letter right, but they hold keys for different lengths and pause in different places. Each difference is small, but across 31 timings they add up, so the checks say “too different” and the try is <strong>rejected</strong>. To see it, enroll yourself, then hand the keyboard to someone else.</p>
+        <p>Tell a friend your password. They can type every letter right, but they hold keys for different lengths and pause in different places. Each difference is small, but across all those timings they add up, so the checks say “too different” and the try is <strong>rejected</strong>. To see it, enroll yourself, then hand the keyboard to someone else.</p>
+      </li>
+      <li>
+        <h3>Rejected but it really is you? Answer your question</h3>
+        <p>Your own rhythm can drift. When the right password is rejected on rhythm, the page offers your security question. Answer it correctly and you are let in, and the page offers to retrain on how you type now. Reset on the Enroll step wipes everything so you can start over with a new password.</p>
       </li>
     </ol>
 
     <div class="how-notes">
       <p><strong>It is not perfect.</strong> Your own rhythm changes when you are tired, rushed or on a different keyboard, so sometimes it will reject you too. Treat it as a demo of the idea, used alongside a password, never instead of one.</p>
-      <p><strong>Your data stays here.</strong> Every timing and your profile are kept in this browser only. Nothing is sent anywhere.</p>
+      <p><strong>Your data stays here.</strong> Every timing, your profile, your question and the hashes of your password and answer are kept in this browser only. Nothing is sent anywhere.</p>
     </div>
   </div>
 
@@ -627,43 +704,85 @@ if (typeof module !== 'undefined') module.exports = KP;
 // ==== KP-DETECTORS END ====
 </script>
 
+<script id="kp-timing">
+// ==== KP-TIMING BEGIN ==== (pure: timing features for a password of any length; also loaded by the tests and bench-mobile.js)
+// KP (frozen for the CMU benchmark) only knows the 11 keys of the CMU dataset. Try it uses each person's own password,
+// so the same H / DD / UD layout is computed here for n keys: n − 1 characters, then Return.
+var KPF = (function () {
+  'use strict';
+  /** Feature names for an n-key attempt, in the same order as CMU: H.k1, DD.k1.k2, UD.k1.k2, H.k2, … H.Return (3n − 2). */
+  function names(n) {
+    var k = [], out = [];
+    for (var i = 1; i < n; i++) k.push('k' + i);
+    k.push('Return');
+    for (var j = 0; j < n; j++) {
+      out.push('H.' + k[j]);
+      if (j < n - 1) out.push('DD.' + k[j] + '.' + k[j + 1], 'UD.' + k[j] + '.' + k[j + 1]);
+    }
+    return out;
+  }
+  /** ks: [{down, up}] in seconds, one per key, in order -> 3n − 2 numbers (same formulas as KP.featuresFromKeystrokes). */
+  function timings(ks) {
+    if (ks.length < 2) throw new Error('need at least 2 keystrokes');
+    var x = [];
+    for (var i = 0; i < ks.length; i++) {
+      x.push(ks[i].up - ks[i].down);
+      if (i < ks.length - 1) {
+        x.push(ks[i + 1].down - ks[i].down);
+        x.push(ks[i + 1].down - ks[i].up);
+      }
+    }
+    return x;
+  }
+  return { names: names, timings: timings };
+})();
+if (typeof module !== 'undefined') module.exports = KPF;
+// ==== KP-TIMING END ====
+</script>
+
 <script id="kp-capture">
-// ==== KP-CAPTURE BEGIN ==== (pure: capture state machine, M1 import, rhythm stats; needs KP; also loaded by test_capture.js)
+// ==== KP-CAPTURE BEGIN ==== (pure: keyboard capture state machine; needs KPF; also loaded by test_capture.js)
 var KPC = (function () {
   'use strict';
-  // Keys that never count toward an attempt. Shift is folded into "R"; the rest are modifiers or focus keys.
+  // Keys that never count toward an attempt. Shift is folded into the character it makes; the rest are modifiers or focus keys.
   var IGNORE = { Shift: 1, Control: 1, Alt: 1, AltGraph: 1, Meta: 1, OS: 1, Fn: 1, FnLock: 1, CapsLock: 1, NumLock: 1, Tab: 1 };
+  var MAX_CHARS = 64;
 
   /**
    * Capture state machine. Feed it keydown/keyup/blur events ({key, code, timeStamp, repeat, ctrlKey, altKey, metaKey}).
-   * Rules (M1 + M2 merged):
+   * The page does not know the password (only its hash), so any characters are recorded until Return:
    *  - clock = e.timeStamp (ms) / 1000, so handler delay is excluded;
-   *  - keys before "." are ignored ("stray"); Ctrl/Alt/Meta chords, AltGraph, Fn and auto-repeat are ignored;
-   *  - a wrong key, Backspace or blur spoils the attempt at once and increments the reject counter;
-   *  - once all keys are down, further keydowns are ignored while the last keys are released (M2 bug fix);
-   *  - keyup is matched by e.code, so releasing Shift before R is safe.
-   * Each call returns an action: {type: ignore|stray|start|key|restart|spoil|release|complete, ...}.
+   *  - the first character starts an attempt; Return or Backspace with nothing typed is "stray";
+   *  - Ctrl/Alt/Meta chords, AltGraph, Fn and auto-repeat are ignored;
+   *  - Backspace, a non-character key (arrows, Delete, …), more than 64 characters or blur spoil the attempt and count a reject;
+   *  - after Return goes down, further keydowns are ignored while the last keys are released;
+   *  - keyup is matched by e.code, so releasing Shift before the letter is safe.
+   * Each call returns an action: {type: ignore|stray|start|key|restart|spoil|release|complete, ...};
+   * complete carries {ks, typed, x}: typed is the text without Return, for the caller to hash and then drop.
    */
-  function createCapture(expected) {
-    expected = expected || KP.EXPECTED_KEYS;
-    var N = expected.length, a = null, rejects = 0;
-    function spoil(reason, pos, want, got) {
+  function createCapture() {
+    var a = null, rejects = 0;
+    function spoil(reason, pos, got) {
       a = null; rejects++;
-      return { type: 'spoil', reason: reason, pos: pos == null ? null : pos, want: want, got: got, rejects: rejects };
+      return { type: 'spoil', reason: reason, pos: pos == null ? null : pos, got: got, rejects: rejects };
     }
     function id(e) { return e.code || 'key:' + e.key; }
     function keydown(e) {
       if (e.key === 'Escape') { var had = !!a; a = null; return { type: had ? 'restart' : 'ignore' }; }
       if (IGNORE[e.key] || e.ctrlKey || e.metaKey || e.altKey) return { type: 'ignore', passThrough: true };
       if (e.repeat) return { type: 'ignore' };
+      var isChar = typeof e.key === 'string' && e.key.length === 1;
       if (!a) {
-        if (e.key !== expected[0]) return { type: 'stray', key: e.key };
-        a = { ks: [], pending: {} };
+        if (!isChar) return { type: 'stray', key: e.key };
+        a = { ks: [], text: '', ended: false, pending: {} };
       }
+      if (a.ended) return { type: 'ignore' };
       var pos = a.ks.length;
-      if (pos >= N) return { type: 'ignore' };
-      var want = expected[pos];
-      if (e.key !== want) return spoil(e.key === 'Backspace' ? 'backspace' : 'typo', pos, want, e.key);
+      if (e.key === 'Enter') a.ended = true;
+      else if (e.key === 'Backspace') return spoil('backspace', pos, e.key);
+      else if (!isChar) return spoil('key', pos, e.key);
+      else if (a.text.length >= MAX_CHARS) return spoil('long', pos, e.key);
+      else a.text += e.key;
       a.ks.push({ down: e.timeStamp / 1000, up: null });
       a.pending[id(e)] = pos;
       return { type: pos === 0 ? 'start' : 'key', pos: pos, n: a.ks.length };
@@ -672,10 +791,10 @@ var KPC = (function () {
       if (!a || !(id(e) in a.pending)) return { type: 'ignore' };
       var pos = a.pending[id(e)];
       a.ks[pos].up = e.timeStamp / 1000; delete a.pending[id(e)];
-      if (a.ks.length === N && Object.keys(a.pending).length === 0) {
-        var ks = a.ks.map(function (k) { return { down: k.down, up: k.up }; });
+      if (a.ended && Object.keys(a.pending).length === 0) {
+        var ks = a.ks.map(function (k) { return { down: k.down, up: k.up }; }), typed = a.text;
         a = null;
-        return { type: 'complete', ks: ks, x: KP.featuresFromKeystrokes(ks) };
+        return { type: 'complete', ks: ks, typed: typed, x: KPF.timings(ks) };
       }
       return { type: 'release', pos: pos };
     }
@@ -688,42 +807,88 @@ var KPC = (function () {
     };
   }
 
-  /**
-   * M1 data -> M2 profile. Accepts an M1 export (schema 1: attempts[].vector, seconds) or M1 localStorage
-   * "keyprint.v1" (attempts[].H/DD/UD, milliseconds). Keeps the latest `keep`. Anything else is returned unchanged.
-   */
-  function fromM1(obj, keep, frr) {
-    if (!obj || !Array.isArray(obj.attempts) || Array.isArray(obj.samples)) return obj;
-    if (obj.featureNames && obj.featureNames.join() !== KP.FEATURE_NAMES.join()) throw new Error('M1 export has a different feature order');
-    var S = obj.attempts.map(function (a) {
-      if (Array.isArray(a.vector)) return a.vector;
-      if (!Array.isArray(a.H) || !Array.isArray(a.DD) || !Array.isArray(a.UD)) throw new Error('M1 attempt has no vector or H/DD/UD');
-      return a.H.flatMap(function (h, i) { return i < a.DD.length ? [h, a.DD[i], a.UD[i]] : [h]; }).map(function (v) { return v / 1000; });
-    });
-    return { app: 'KeyPrint', passphrase: obj.passphrase, samples: S.slice(-(keep || 10)), frr: frr == null ? 0.05 : frr, fromM1: S.length };
-  }
-
-  /** Per-feature mean and SD (n − 1) of enrollment samples, for the rhythm chart. */
-  function featureStats(S) {
-    if (!S.length) return null;
-    var d = S[0].length, mu = new Array(d).fill(0), sd = new Array(d).fill(0);
-    S.forEach(function (x) { for (var j = 0; j < d; j++) mu[j] += x[j] / S.length; });
-    if (S.length > 1) S.forEach(function (x) { for (var j = 0; j < d; j++) sd[j] += (x[j] - mu[j]) * (x[j] - mu[j]) / (S.length - 1); });
-    return { mean: mu, sd: sd.map(Math.sqrt), n: S.length };
-  }
-
-  return { IGNORE: IGNORE, createCapture: createCapture, fromM1: fromM1, featureStats: featureStats };
+  return { IGNORE: IGNORE, MAX_CHARS: MAX_CHARS, createCapture: createCapture };
 })();
 if (typeof module !== 'undefined') module.exports = KPC;
 // ==== KP-CAPTURE END ====
 </script>
 
+<script id="kp-secret">
+// ==== KP-SECRET BEGIN ==== (password rules and salted hashes; also loaded by test_secret.js)
+var KPS = (function () {
+  'use strict';
+  var MIN_LEN = 8, ITERATIONS = 100000;
+  // Printable ASCII only, so every password can also be typed on the phone keypad.
+  var RULES = [
+    { id: 'len', text: 'At least 8 characters', test: function (p) { return p.length >= MIN_LEN; } },
+    { id: 'upper', text: 'A capital letter (A–Z)', test: function (p) { return /[A-Z]/.test(p); } },
+    { id: 'number', text: 'A number (0–9)', test: function (p) { return /[0-9]/.test(p); } },
+    { id: 'special', text: 'A special character, like ! ? # @', test: function (p) { return /[!-\/:-@\[-`{-~]/.test(p); } }
+  ];
+
+  /** -> {ok, rules: {len, upper, number, special}, badChar: first character the keypad cannot type, or null} */
+  function checkPassword(p) {
+    p = p || '';
+    var rules = {}, ok = true, bad = p.match(/[^ -~]/);
+    RULES.forEach(function (r) { rules[r.id] = r.test(p); ok = ok && rules[r.id]; });
+    if (p.length > 64) ok = false;
+    return { ok: ok && !bad, rules: rules, badChar: bad ? bad[0] : null, tooLong: p.length > 64 };
+  }
+  /** Answers are compared case- and spacing-insensitively: "  Blue  Car" matches "blue car". */
+  function normalizeAnswer(s) { return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase(); }
+
+  function hex(buf) { return Array.prototype.map.call(new Uint8Array(buf), function (b) { return (b < 16 ? '0' : '') + b.toString(16); }).join(''); }
+  function bytes(h) { var out = new Uint8Array(h.length / 2); for (var i = 0; i < out.length; i++) out[i] = parseInt(h.substr(2 * i, 2), 16); return out; }
+  function salt(crypto) { var b = new Uint8Array(16); crypto.getRandomValues(b); return hex(b); }
+  /** PBKDF2-SHA-256 of text with a hex salt -> 64 hex characters. crypto is window.crypto (or Node's webcrypto). */
+  function hash(crypto, text, saltHex, iterations) {
+    var enc = new TextEncoder().encode(text);
+    return crypto.subtle.importKey('raw', enc, 'PBKDF2', false, ['deriveBits']).then(function (key) {
+      return crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: bytes(saltHex), iterations: iterations || ITERATIONS }, key, 256);
+    }).then(hex);
+  }
+  /** The stored account: the question in plain text (it is shown back), the password and answer only as salted hashes. */
+  function makeAccount(crypto, password, question, answer) {
+    var a = { v: 1, iterations: ITERATIONS, pwSalt: salt(crypto), ansSalt: salt(crypto), question: String(question).trim() };
+    return Promise.all([hash(crypto, password, a.pwSalt, a.iterations), hash(crypto, normalizeAnswer(answer), a.ansSalt, a.iterations)])
+      .then(function (h) { a.pwHash = h[0]; a.ansHash = h[1]; return a; });
+  }
+  function checkTyped(crypto, account, typed) {
+    return hash(crypto, typed, account.pwSalt, account.iterations).then(function (h) { return h === account.pwHash; });
+  }
+  function checkAnswer(crypto, account, answer) {
+    return hash(crypto, normalizeAnswer(answer), account.ansSalt, account.iterations).then(function (h) { return h === account.ansHash; });
+  }
+  function isAccount(a) {
+    return !!a && a.v === 1 && typeof a.question === 'string' && a.question.length > 0 && [a.pwSalt, a.pwHash, a.ansSalt, a.ansHash].every(function (h) {
+      return typeof h === 'string' && /^[0-9a-f]+$/.test(h) && h.length % 2 === 0;
+    }) && a.iterations > 0;
+  }
+
+  return {
+    MIN_LEN: MIN_LEN, ITERATIONS: ITERATIONS, RULES: RULES, checkPassword: checkPassword, normalizeAnswer: normalizeAnswer,
+    hash: hash, makeAccount: makeAccount, checkTyped: checkTyped, checkAnswer: checkAnswer, isAccount: isAccount
+  };
+})();
+if (typeof module !== 'undefined') module.exports = KPS;
+// ==== KP-SECRET END ====
+</script>
+
 <script id="kp-touch">
-// ==== KP-TOUCH BEGIN ==== (pure: keypad tap capture, 31 timing + 22 position features, synthetic volunteers; needs KP; also loaded by test_touch.js and bench-mobile.js)
+// ==== KP-TOUCH BEGIN ==== (pure: keypad tap capture, timing + position features, synthetic volunteers; needs KP, KPF; also loaded by test_touch.js and bench-mobile.js)
 var KPT = (function () {
   'use strict';
-  // On-screen keypad: only the keys of .tie5Roanl + Return, in rough QWERTY order, 5 per row so keys stay ≥ 44 px on a 360 px phone.
-  var KEYPAD_ROWS = [['5', 'e', 't', 'i', 'o'], ['a', 'n', 'l', 'R', '.'], ['Enter']];
+  // On-screen keyboard: every printable ASCII character, so any valid password can be tapped. Three layers like a phone
+  // keyboard; Shift (one-shot), 123/#+= and abc switch layers and are not part of the attempt.
+  var LAYERS = {
+    lower: ['qwertyuiop', 'asdfghjkl', ['Shift', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'Backspace'], ['123', ' ', 'Enter']],
+    upper: ['QWERTYUIOP', 'ASDFGHJKL', ['Shift', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'Backspace'], ['123', ' ', 'Enter']],
+    symbols: ['1234567890', '!@#$%^&*()', '-_=+[]{};:', ['\'', '"', ',', '.', '/', '?', '\\', '|', 'Backspace'], ['abc', '<', '>', '`', '~', ' ', 'Enter']]
+  };
+  Object.keys(LAYERS).forEach(function (l) { LAYERS[l] = LAYERS[l].map(function (r) { return typeof r === 'string' ? r.split('') : r; }); });
+  var CONTROL = { Shift: 1, '123': 1, abc: 1 };
+  var MAX_CHARS = 64;
+  // CMU layout (11 keys), used by the synthetic volunteers and bench-mobile.js
   var TIMING_DIM = KP.DIM;   // 31
   var POS_NAMES = [];
   KP.KEY_NAMES.forEach(function (k) { POS_NAMES.push('X.' + k, 'Y.' + k); });
@@ -735,35 +900,46 @@ var KPT = (function () {
     var r4 = function (v) { return Math.round(v * 1e4) / 1e4; };
     return { dx: r4((clientX - (rect.left + rect.width / 2)) / rect.width), dy: r4((clientY - (rect.top + rect.height / 2)) / rect.height) };
   }
-  /** ks: [{down, up, dx, dy}] (seconds) -> 53 numbers: KP's 31 timings, then X.k, Y.k per key. */
+  /** Feature names for an n-key attempt: KPF.names(n), then X.k, Y.k per key. */
+  function featureNames(n) {
+    var out = KPF.names(n);
+    for (var i = 1; i <= n; i++) { var k = i === n ? 'Return' : 'k' + i; out.push('X.' + k, 'Y.' + k); }
+    return out;
+  }
+  /** ks: [{down, up, dx, dy}] (seconds) -> KP's 3n − 2 timings, then X.k, Y.k per key (53 numbers for 11 keys). */
   function features(ks) {
-    var x = KP.featuresFromKeystrokes(ks);
+    var x = KPF.timings(ks);
     ks.forEach(function (k) { x.push(k.dx, k.dy); });
     return x;
   }
-  function timingOnly(x) { return x.slice(0, TIMING_DIM); }
+  /** Timing part of a keypad vector: n keys give 3n − 2 timings + 2n positions, so n = (length + 2) / 5. */
+  function timingOnly(x) { return x.slice(0, 3 * (x.length + 2) / 5 - 2); }
 
   /**
-   * Tap capture, same rules as the keyboard: clock = e.timeStamp; taps before "." are ignored; a wrong key spoils the
-   * attempt and counts a reject; taps after all 11 keys are down are ignored. Taps may overlap (multi-touch): each
-   * pointerup is matched to its pointerdown by pointerId. interrupt() (pointercancel, page hidden) spoils a started attempt.
-   * down({key, id, timeStamp, dx, dy}) / up({id, timeStamp}) return {type: ignore|stray|start|key|spoil|release|complete, ...}.
+   * Tap capture, same rules as the keyboard: clock = e.timeStamp; the first character starts an attempt and Return ends
+   * it; Backspace or more than 64 characters spoils it and counts a reject; taps after Return are ignored. Control keys
+   * (Shift, 123, abc) never reach here. Taps may overlap (multi-touch): each pointerup is matched to its pointerdown by
+   * pointerId. interrupt() (pointercancel, page hidden) spoils a started attempt.
+   * down({key, id, timeStamp, dx, dy}) / up({id, timeStamp}) return {type: ignore|stray|start|key|spoil|release|complete, ...};
+   * complete carries {ks, typed, x}.
    */
-  function createTapCapture(expected) {
-    expected = expected || KP.EXPECTED_KEYS;
-    var N = expected.length, a = null, rejects = 0;
-    function spoil(reason, pos, want, got) {
+  function createTapCapture() {
+    var a = null, rejects = 0;
+    function spoil(reason, pos, got) {
       a = null; rejects++;
-      return { type: 'spoil', reason: reason, pos: pos == null ? null : pos, want: want, got: got, rejects: rejects };
+      return { type: 'spoil', reason: reason, pos: pos == null ? null : pos, got: got, rejects: rejects };
     }
     function down(e) {
       if (!a) {
-        if (e.key !== expected[0]) return { type: 'stray', key: e.key };
-        a = { ks: [], pending: {} };
+        if (e.key === 'Enter' || e.key === 'Backspace') return { type: 'stray', key: e.key };
+        a = { ks: [], text: '', ended: false, pending: {} };
       }
       var pos = a.ks.length;
-      if (pos >= N || e.id in a.pending) return { type: 'ignore' };
-      if (e.key !== expected[pos]) return spoil('typo', pos, expected[pos], e.key);
+      if (a.ended || e.id in a.pending) return { type: 'ignore' };
+      if (e.key === 'Backspace') return spoil('backspace', pos, e.key);
+      if (e.key === 'Enter') a.ended = true;
+      else if (a.text.length >= MAX_CHARS) return spoil('long', pos, e.key);
+      else a.text += e.key;
       a.ks.push({ down: e.timeStamp / 1000, up: null, dx: e.dx, dy: e.dy });
       a.pending[e.id] = pos;
       return { type: pos === 0 ? 'start' : 'key', pos: pos, n: a.ks.length };
@@ -772,10 +948,10 @@ var KPT = (function () {
       if (!a || !(e.id in a.pending)) return { type: 'ignore' };
       var pos = a.pending[e.id];
       a.ks[pos].up = e.timeStamp / 1000; delete a.pending[e.id];
-      if (a.ks.length === N && Object.keys(a.pending).length === 0) {
-        var ks = a.ks.map(function (k) { return { down: k.down, up: k.up, dx: k.dx, dy: k.dy }; });
+      if (a.ended && Object.keys(a.pending).length === 0) {
+        var ks = a.ks.map(function (k) { return { down: k.down, up: k.up, dx: k.dx, dy: k.dy }; }), typed = a.text;
         a = null;
-        return { type: 'complete', ks: ks, x: features(ks) };
+        return { type: 'complete', ks: ks, typed: typed, x: features(ks) };
       }
       return { type: 'release', pos: pos };
     }
@@ -822,7 +998,7 @@ var KPT = (function () {
   }
 
   return {
-    KEYPAD_ROWS: KEYPAD_ROWS, TIMING_DIM: TIMING_DIM, POS_NAMES: POS_NAMES, FEATURE_NAMES: FEATURE_NAMES, DIM: DIM,
+    LAYERS: LAYERS, CONTROL: CONTROL, featureNames: featureNames, TIMING_DIM: TIMING_DIM, POS_NAMES: POS_NAMES, FEATURE_NAMES: FEATURE_NAMES, DIM: DIM,
     offset: offset, features: features, timingOnly: timingOnly, createTapCapture: createTapCapture, syntheticVolunteers: syntheticVolunteers
   };
 })();
@@ -835,85 +1011,80 @@ if (typeof module !== 'undefined') module.exports = KPT;
   'use strict';
   var N_ENROLL = 10;
   // Desktop and phone profiles live under separate keys and are never scored against each other.
-  var STORE = { desktop: 'keyprint.profile.v2', mobile: 'keyprint.profile.mobile.v1' };
+  // The account (security question, salted hashes of the password and answer) is shared by both.
+  var STORE = { desktop: 'keyprint.profile.v3', mobile: 'keyprint.profile.mobile.v2' }, ACCOUNT = 'keyprint.account.v1';
+  var OLD_KEYS = ['keyprint.profile.v2', 'keyprint.profile.mobile.v1', 'keyprint.v1'];   // timings for the old shared passphrase
   var $ = function (id) { return document.getElementById(id); };
-  var LABEL = { period: '.', five: '5', 'Shift.r': 'R', Return: '⏎' };
-  var lab = function (k) { return LABEL[k] || k; };
-  var keyName = function (k) { return k === 'Enter' ? 'Return' : k; };
+  var keyName = function (k) { return k === 'Enter' ? 'Return' : k === ' ' ? 'Space' : k; };
+  var crypto = window.crypto;
 
+  var account = null;
   var state = { device: 'desktop', step: 'enroll', samples: [], frr: 0.05, trained: null, lastX: null };
-  var dim = function () { return state.device === 'mobile' ? KPT.DIM : KP.DIM; };
-  var names = function () { return state.device === 'mobile' ? KPT.FEATURE_NAMES : KP.FEATURE_NAMES; };
+  var dim = function () { return state.samples.length ? state.samples[0].length : null; };
 
   // ---------- device: keyboard vs on-screen keypad ----------
   var coarse = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
   var touchSeen = false, keypadOn = false;
-  var isTouch = function () { return coarse || touchSeen; };
 
   // ---------- capture controller ----------
-  /** o: {keys, input, keypad, status(msg, kind), onStart(), onComplete(r, device, pointer), blocked() -> message|null} */
+  /** o: {input, keypad, status(msg, kind), onStart(), onComplete(r, device, pointer), blocked() -> message|null} */
   function Capturer(o) {
-    var kcap = KPC.createCapture(), tcap = KPT.createTapCapture(), errPos = null, pressed = {}, ptypes = {};
-    KP.KEY_NAMES.forEach(function (k) {
-      var d = document.createElement('div'); d.className = 'key' + (k === 'Return' ? ' wide' : ''); d.textContent = lab(k); o.keys.appendChild(d);
-    });
-    var strip = o.keys.children, keyEls = {};
-    KPT.KEYPAD_ROWS.forEach(function (row) {
-      var r = document.createElement('div'); r.className = 'kr' + (row[0] === 'Enter' ? ' ret' : '');
-      row.forEach(function (k) {
-        var b = document.createElement('button');
-        b.type = 'button'; b.tabIndex = -1; b.className = 'kp-key' + (k === 'Enter' ? ' ret' : ''); b.dataset.k = k;
-        b.setAttribute('aria-label', k === 'Enter' ? 'Return' : k === '.' ? 'period' : k === 'R' ? 'capital R' : k);
-        b.appendChild(document.createTextNode(k === 'Enter' ? 'Return ⏎' : k));
-        keyEls[k] = b; r.appendChild(b);
+    var kcap = KPC.createCapture(), tcap = KPT.createTapCapture(), pressed = {}, ptypes = {}, layer = 'lower', shiftOnce = false;
+    var LABEL = { Shift: '⇧', Backspace: '⌫', Enter: '⏎', ' ': 'space' };
+    var ARIA = { Shift: 'Shift', Backspace: 'Backspace', Enter: 'Return', ' ': 'Space', '123': 'Numbers and symbols', abc: 'Letters' };
+    Object.keys(KPT.LAYERS).forEach(function (name) {
+      var wrap = document.createElement('div'); wrap.className = 'kp-layer'; wrap.dataset.layer = name; wrap.hidden = name !== layer;
+      KPT.LAYERS[name].forEach(function (row) {
+        var r = document.createElement('div'); r.className = 'kr';
+        row.forEach(function (k) {
+          var b = document.createElement('button'), ctl = KPT.CONTROL[k];
+          b.type = 'button'; b.tabIndex = -1;
+          b.className = 'kp-key' + (ctl || k === 'Backspace' ? ' fn' : '') + (k === 'Enter' ? ' ret' : '') + (k === ' ' ? ' space' : '');
+          if (ctl) b.dataset.ctl = k; else b.dataset.k = k;
+          if (ARIA[k]) b.setAttribute('aria-label', ARIA[k]);
+          b.appendChild(document.createTextNode(LABEL[k] || k));
+          r.appendChild(b);
+        });
+        wrap.appendChild(r);
       });
-      o.keypad.appendChild(r);
+      o.keypad.appendChild(wrap);
     });
+    function setLayer(name) {
+      layer = name;
+      o.keypad.querySelectorAll('.kp-layer').forEach(function (l) { l.hidden = l.dataset.layer !== name; });
+      o.keypad.querySelectorAll('[data-ctl="Shift"]').forEach(function (b) { b.classList.toggle('on', name === 'upper'); });
+    }
     var total = function () { return kcap.rejects() + tcap.rejects(); };
-    var cur = function () { return keypadOn ? tcap : kcap; };
-    function paint() {
-      var ks = cur().attempt();
-      for (var i = 0; i < strip.length; i++) {
-        var cls = 'key' + (i === 10 ? ' wide' : '');
-        if (!ks && errPos === i) cls += ' err';
-        else if (ks && ks[i]) cls += ks[i].up == null ? ' down' : ' done';
-        strip[i].className = cls;
-      }
-    }
-    function clearTaps() { o.keypad.querySelectorAll('.tap').forEach(function (t) { t.remove(); }); }
-    function showTaps(ks) {   // dots where each tap of the last attempt landed
-      clearTaps();
-      ks.forEach(function (k, i) {
-        var b = keyEls[KP.EXPECTED_KEYS[i]], d = document.createElement('span');
-        d.className = 'tap'; d.style.left = (50 + k.dx * 100) + '%'; d.style.top = (50 + k.dy * 100) + '%'; b.appendChild(d);
-      });
-    }
     function release() { Object.keys(pressed).forEach(function (id) { pressed[id].classList.remove('down'); }); pressed = {}; }
     function onSpoil(r) {
-      errPos = r.pos; o.input.value = '';
+      o.input.value = '';
       var why = r.reason === 'backspace' ? 'Backspace used' : r.reason === 'blur' ? 'Focus left the field'
+        : r.reason === 'long' ? 'Too long (over ' + KPC.MAX_CHARS + ' characters)'
         : r.reason === 'cancel' ? 'Touch cancelled (the finger slid off or the browser took over)' : r.reason === 'hidden' ? 'Page was hidden'
-        : 'Wrong key: expected “' + keyName(r.want) + '” at position ' + (r.pos + 1) + ', got “' + keyName(r.got) + '”';
-      o.status(why + '. Attempt discarded (' + total() + ' this session); start again with “.”', 'bad');
+        : '“' + keyName(r.got) + '” is not part of a password';
+      o.status(why + '. Attempt discarded (' + total() + ' this session); type the whole password again.', 'bad');
     }
     function handle(r) {
-      if (r.type === 'restart') { errPos = null; o.input.value = ''; o.status('Restarted. Start with “.”'); }
-      else if (r.type === 'stray') o.status('Start with “.” (ignored “' + keyName(r.key) + '”).');
+      if (r.type === 'restart') { o.input.value = ''; o.status('Restarted. Type your password, then Return.'); }
+      else if (r.type === 'stray') o.status('Type your password first, then Return.');
       else if (r.type === 'start' || r.type === 'key') {
-        if (r.type === 'start') { errPos = null; clearTaps(); if (o.onStart) o.onStart(); }
+        if (r.type === 'start' && o.onStart) o.onStart();
         if (!keypadOn) o.input.value = '•'.repeat(r.n);
       }
       else if (r.type === 'spoil') { release(); onSpoil(r); }
       if (r.type === 'complete') {
-        o.input.value = ''; paint();
+        o.input.value = '';
         var pt = keypadOn ? Object.keys(ptypes).sort().join('+') || 'unknown' : 'keyboard'; ptypes = {};
-        if (keypadOn) showTaps(r.ks);
+        if (keypadOn) { shiftOnce = false; setLayer('lower'); }   // the next try starts on letters
         o.onComplete(r, keypadOn ? 'mobile' : 'desktop', pt);
-      } else paint();
+      }
       if (r.type === 'spoil' || r.type === 'restart') ptypes = {};
     }
     // physical keyboard
-    o.input.addEventListener('keydown', function (e) { var r = kcap.keydown(e); if (!r.passThrough) e.preventDefault(); handle(r); });
+    o.input.addEventListener('keydown', function (e) {
+      var msg = o.blocked && o.blocked(); if (msg && !e.ctrlKey && !e.metaKey) { e.preventDefault(); o.status(msg, 'bad'); return; }
+      var r = kcap.keydown(e); if (!r.passThrough) e.preventDefault(); handle(r);
+    });
     o.input.addEventListener('keyup', function (e) { handle(kcap.keyup(e)); });
     o.input.addEventListener('blur', function () { handle(kcap.blur()); });
     o.input.addEventListener('paste', function (e) { e.preventDefault(); });
@@ -924,21 +1095,28 @@ if (typeof module !== 'undefined') module.exports = KPT;
     });
     // on-screen keypad: pointer events, e.timeStamp, overlapping taps matched by pointerId
     o.keypad.addEventListener('pointerdown', function (e) {
-      var b = e.target.closest('[data-k]'); if (!b || !o.keypad.contains(b)) return;
+      var b = e.target.closest('[data-k],[data-ctl]'); if (!b || !o.keypad.contains(b)) return;
       e.preventDefault();   // no focus (so no system keyboard), no selection, no emulated mouse events
       if (e.pointerType === 'touch') touchSeen = true;
+      if (b.dataset.ctl) {   // layer keys: not part of the attempt
+        var c = b.dataset.ctl;
+        if (c === 'Shift') { shiftOnce = layer !== 'upper'; setLayer(shiftOnce ? 'upper' : 'lower'); }
+        else { shiftOnce = false; setLayer(c === '123' ? 'symbols' : 'lower'); }
+        return;
+      }
       var msg = o.blocked && o.blocked(); if (msg) { o.status(msg, 'bad'); return; }
       try { b.setPointerCapture(e.pointerId); } catch (err) { /* synthetic events have no active pointer */ }
       var off = KPT.offset(e.clientX, e.clientY, b.getBoundingClientRect());
       var r = tcap.down({ key: b.dataset.k, id: e.pointerId, timeStamp: e.timeStamp, dx: off.dx, dy: off.dy });
-      if (r.type === 'start' || r.type === 'key') { pressed[e.pointerId] = b; b.classList.add('down'); ptypes[e.pointerType || 'unknown'] = 1; }
-      else if (r.type === 'stray' || r.type === 'ignore') { pressed[e.pointerId] = b; b.classList.add('down'); }
+      if (r.type === 'start' || r.type === 'key') ptypes[e.pointerType || 'unknown'] = 1;
+      if (r.type !== 'spoil') { pressed[e.pointerId] = b; b.classList.add('down'); }
       handle(r);
     });
     function lift(e) {
       var b = pressed[e.pointerId]; if (!b) return;
       delete pressed[e.pointerId]; b.classList.remove('down');
       handle(e.type === 'pointerup' ? tcap.up({ id: e.pointerId, timeStamp: e.timeStamp }) : tcap.interrupt('cancel'));
+      if (shiftOnce && /^[A-Z]$/.test(b.dataset.k)) { shiftOnce = false; setLayer('lower'); }   // one-shot Shift
     }
     o.keypad.addEventListener('pointerup', lift);
     o.keypad.addEventListener('pointercancel', lift);
@@ -946,25 +1124,39 @@ if (typeof module !== 'undefined') module.exports = KPT;
     o.keypad.addEventListener('contextmenu', function (e) { e.preventDefault(); });
     o.keypad.addEventListener('dblclick', function (e) { e.preventDefault(); });
     document.addEventListener('visibilitychange', function () { if (document.hidden && keypadOn) { release(); handle(tcap.interrupt('hidden')); } });
-    function reset() { kcap.cancel(); tcap.cancel(); release(); errPos = null; ptypes = {}; o.input.value = ''; paint(); }
+    function reset() { kcap.cancel(); tcap.cancel(); release(); ptypes = {}; o.input.value = ''; }
     return {
-      reset: reset, paint: paint,
-      mode: function () { o.input.hidden = keypadOn; o.keypad.hidden = !keypadOn; clearTaps(); reset(); },
-      focus: function () { if (!keypadOn && !o.input.disabled) o.input.focus(); }
+      reset: reset,
+      mode: function () { o.input.hidden = keypadOn; o.keypad.hidden = !keypadOn; shiftOnce = false; setLayer('lower'); reset(); },
+      focus: function () { if (!keypadOn && !o.input.disabled && !o.input.closest('[hidden]')) o.input.focus(); }
     };
   }
 
   function setStatus(msg, kind) { var s = $('status'); s.textContent = msg; s.className = 'status' + (kind ? ' ' + kind : ''); }
   var tryCap = Capturer({
-    keys: $('keys'), input: $('pass'), keypad: $('keypad'), status: setStatus,
-    onStart: function () { setStatus('Recording…'); },
+    input: $('pass'), keypad: $('keypad'), status: setStatus,
+    blocked: function () { return checking ? 'One moment, checking the last try…' : null; },
+    onStart: function () { setStatus('Recording…'); showRecover(false); },
     onComplete: function (r, device) { finishAttempt(r, device); }
   });
 
+  // ---------- each finished attempt: is it the password? then enroll or verify ----------
+  var checking = false;
   function finishAttempt(r, device) {
-    if (device !== state.device || r.x.length !== dim()) { setStatus('Capture mode changed mid-attempt; try again.', 'bad'); return; }
-    state.lastX = r.x;
-    if (state.step === 'enroll') onEnrollSample(r.x); else onVerify(r.x);
+    if (!account) return;
+    if (device !== state.device) { setStatus('Capture mode changed mid-attempt; try again.', 'bad'); return; }
+    checking = true; setStatus('Checking…');
+    KPS.checkTyped(crypto, account, r.typed).then(function (ok) {
+      checking = false;
+      if (!ok) {
+        setStatus(state.step === 'enroll' ? 'That is not the password you created. Attempt not counted; try again.'
+          : 'Rejected: that is not the password.', 'bad');
+        return;
+      }
+      if (dim() && r.x.length !== dim()) { setStatus('This try does not match the profile; not compared.', 'bad'); return; }
+      state.lastX = r.x;
+      if (state.step === 'enroll') onEnrollSample(r.x); else onVerify(r.x);
+    }, function () { checking = false; setStatus('This browser could not check the password.', 'bad'); });
   }
 
   // ---------- enrollment & training ----------
@@ -980,34 +1172,68 @@ if (typeof module !== 'undefined') module.exports = KPT;
   }
   function train() { state.trained = state.samples.length >= 3 ? KP.trainAll(state.samples) : null; }
 
-  // ---------- verify: 2 of 3 detectors must accept ----------
+  // ---------- verify: 2 of 3 detectors must accept; a rhythm reject offers the security question ----------
   function onVerify(x) {
     if (!state.trained) { setStatus('Train a profile first.', 'bad'); return; }
-    if (x.length !== state.samples[0].length) { setStatus('This attempt and the profile come from different devices; not compared.', 'bad'); return; }
     var accepts = KP.DETECTORS.filter(function (d) {
       return d.score(state.trained[d.id].model, x) <= KP.thresholdAt(state.trained[d.id].loo, state.frr);
     }).length, ok = accepts >= 2;
-    setStatus(ok ? 'Accepted: ' + accepts + ' of 3 detectors say it is you.' : 'Rejected: only ' + accepts + ' of 3 detectors say it is you.', ok ? 'ok' : 'bad');
+    setStatus(ok ? 'Accepted: ' + accepts + ' of 3 detectors say it is you.' : 'Rejected: right password, but only ' + accepts + ' of 3 detectors say it is you.', ok ? 'ok' : 'bad');
+    showRecover(!ok);
   }
 
-  /** Profiles without a device field are desktop (M2–M4 exports, M1 data). */
+  // ---------- security question (backup after a rhythm reject) ----------
+  function showRecover(on) {
+    $('recover-row').hidden = !on;
+    if (!on) { $('recover').hidden = true; $('retrain-row').hidden = true; }
+  }
+  $('recover-open').addEventListener('click', function () {
+    $('recover-row').hidden = true; $('recover').hidden = false;
+    $('recover-q').textContent = account.question; $('recover-a').value = ''; $('recover-msg').textContent = '';
+    $('recover-a').focus();
+  });
+  $('recover').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var ans = $('recover-a').value;
+    if (!KPS.normalizeAnswer(ans)) { $('recover-msg').textContent = 'Type your answer first.'; return; }
+    $('recover-check').disabled = true;
+    KPS.checkAnswer(crypto, account, ans).then(function (ok) {
+      $('recover-check').disabled = false;
+      if (!ok) { $('recover-msg').textContent = 'That answer is not right. Try again.'; $('recover-a').select(); return; }
+      $('recover').hidden = true; $('recover-a').value = '';
+      setStatus('Correct answer: you are in. Your rhythm may have changed. Retrain so the page learns it again?', 'ok');
+      $('retrain-row').hidden = false;
+    }, function () { $('recover-check').disabled = false; $('recover-msg').textContent = 'This browser could not check the answer.'; });
+  });
+  $('retrain').addEventListener('click', function () {
+    showRecover(false); clearSamples();
+    setStatus('Retraining. Step 1: type your password 10 times.', 'ok'); tryCap.focus();
+  });
+
+  /** Stored samples must be finite number vectors of one length, and belong to this account. */
   function loadProfile(obj) {
-    obj = KPC.fromM1(obj, N_ENROLL, state.frr);
     if (!obj || obj.app !== 'KeyPrint' || !Array.isArray(obj.samples)) throw new Error('Not a KeyPrint profile');
-    if (obj.passphrase && obj.passphrase !== KP.PASSPHRASE) throw new Error('Profile is for a different passphrase');
+    if (!account || obj.account !== account.pwSalt) throw new Error('Profile is for a different password');
     if ((obj.device || 'desktop') !== state.device) throw new Error('Profile is for the other device type');
-    var ok = obj.samples.every(function (x) { return Array.isArray(x) && x.length === dim() && x.every(function (v) { return typeof v === 'number' && isFinite(v); }); });
-    if (!ok) throw new Error('Each sample must be ' + dim() + ' numbers');
+    var n = obj.samples.length ? obj.samples[0].length : 0;
+    var ok = obj.samples.every(function (x) { return Array.isArray(x) && x.length === n && x.every(function (v) { return typeof v === 'number' && isFinite(v); }); });
+    if (!ok) throw new Error('Samples must be equal-length number lists');
     state.samples = obj.samples.slice(0, N_ENROLL);
     state.frr = typeof obj.frr === 'number' ? Math.min(0.3, Math.max(0, obj.frr)) : 0.05;
     if (state.samples.length === N_ENROLL) { train(); setStep('verify'); } else { state.trained = null; setStep('enroll'); }
   }
 
-  // ---------- reset (Try it, Enroll step only): tap once to arm, again to confirm ----------
-  function clearProfile() {
+  // ---------- reset (Try it, Enroll step only): tap once to arm, again to confirm; starts over with a new password ----------
+  function clearSamples() {
     state.samples = []; state.trained = null; state.frr = 0.05; state.lastX = null;
     setStep('enroll'); save(); render();
-    setStatus('Reset done. Step 1: type the passphrase 10 times.', 'ok');
+  }
+  function clearAll() {
+    try { localStorage.removeItem(ACCOUNT); localStorage.removeItem(STORE.desktop); localStorage.removeItem(STORE.mobile); } catch (e) { }
+    account = null;
+    state.samples = []; state.trained = null; state.frr = 0.05; state.lastX = null;
+    showRecover(false); setStep('enroll'); render();
+    setStatus('Reset done. Create a new password to start again.', 'ok');
   }
   function resetButton(b, after) {
     var label = b.textContent, timer = null;
@@ -1017,27 +1243,81 @@ if (typeof module !== 'undefined') module.exports = KPT;
         timer = setTimeout(function () { b.classList.remove('armed'); b.textContent = label; }, 3000); return;
       }
       clearTimeout(timer); b.classList.remove('armed'); b.textContent = label;
-      clearProfile(); if (after) after();
+      clearAll(); if (after) after();
     });
   }
-  resetButton($('reset'), function () { tryCap.focus(); });
+  resetButton($('reset'), function () { $('su-pass').focus(); });
 
-  // ---------- guided steps: 1 Enroll → 2 Verify ----------
+  // ---------- set up: your own password + security question ----------
+  var ruleEls = {};
+  KPS.RULES.forEach(function (r) {
+    var li = document.createElement('li'); li.id = 'rule-' + r.id; li.textContent = r.text; $('su-rules').appendChild(li); ruleEls[r.id] = li;
+  });
+  function paintRules() {
+    var c = KPS.checkPassword($('su-pass').value), typed = $('su-pass').value.length > 0;
+    KPS.RULES.forEach(function (r) {
+      var el = ruleEls[r.id];
+      el.className = c.rules[r.id] ? 'met' : typed ? 'unmet' : '';
+      el.setAttribute('aria-label', r.text + (c.rules[r.id] ? ': done' : ': not yet'));
+    });
+    var extra = c.badChar ? '“' + c.badChar + '” cannot be used. Use letters, numbers and symbols from a standard keyboard.'
+      : c.tooLong ? 'Use at most 64 characters.' : '';
+    $('su-pass-msg').textContent = extra;
+    return c;
+  }
+  $('su-pass').addEventListener('input', function () { paintRules(); paintConfirm(false); });
+  function paintConfirm(force) {
+    var p = $('su-pass').value, c = $('su-confirm').value, bad = c.length > 0 && (force || c.length >= p.length) && c !== p;
+    $('su-confirm-msg').textContent = bad ? 'The two passwords are not the same.' : '';
+    $('su-confirm').setAttribute('aria-invalid', bad ? 'true' : 'false');
+    return !bad && c === p;
+  }
+  $('su-confirm').addEventListener('input', function () { paintConfirm(false); });
+  $('su-show').addEventListener('change', function () {
+    var t = this.checked ? 'text' : 'password'; $('su-pass').type = t; $('su-confirm').type = t;
+  });
+  $('setup').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var c = paintRules(), same = paintConfirm(true), q = $('su-q').value.trim(), a = KPS.normalizeAnswer($('su-a').value);
+    $('su-q-msg').textContent = q.length < 5 ? 'Write a question of at least 5 characters.' : '';
+    $('su-a-msg').textContent = a.length < 2 ? 'Write an answer of at least 2 characters.' : '';
+    var first = !c.ok ? 'su-pass' : !same ? 'su-confirm' : q.length < 5 ? 'su-q' : a.length < 2 ? 'su-a' : null;
+    $('su-pass').setAttribute('aria-invalid', c.ok ? 'false' : 'true');
+    if (first) { $('su-error').textContent = 'Fix the highlighted fields, then Create.'; $(first).focus(); return; }
+    $('su-error').textContent = '';
+    $('su-create').disabled = true;
+    KPS.makeAccount(crypto, $('su-pass').value, q, $('su-a').value).then(function (acct) {
+      $('su-create').disabled = false;
+      account = acct;
+      try { localStorage.setItem(ACCOUNT, JSON.stringify(acct)); } catch (err) { }
+      $('setup').reset(); $('su-pass').type = 'password'; $('su-confirm').type = 'password'; paintRules();
+      state.samples = []; state.trained = null; state.lastX = null;
+      setStep('enroll'); save(); render();
+      setStatus('Password saved. Step 1: type it 10 times, each time ending with Return.', 'ok');
+      tryCap.focus();
+    }, function () { $('su-create').disabled = false; $('su-error').textContent = 'This browser cannot store a hashed password (it needs https).'; });
+  });
+
+  // ---------- guided steps: 0 Set up → 1 Enroll → 2 Verify ----------
   var HEADINGS = {
-    enroll: 'Step 1 · Enroll: type the passphrase, then Return',
+    enroll: 'Step 1 · Enroll: type your password, then Return',
     verify: 'Step 2 · Verify: type it again'
   };
   function paintSteps() {
+    var setup = !account;
+    $('setup').hidden = !setup; $('capture').hidden = setup;
     ['enroll', 'verify'].forEach(function (k) {
       var b = $('step-' + k);
       if (k === state.step) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
       if (k !== 'enroll') b.disabled = !state.trained;
     });
-    $('cap-h').textContent = HEADINGS[state.step];
-    $('reset-row').hidden = state.step !== 'enroll';
+    $('cap-h').textContent = setup ? 'Create your password' : HEADINGS[state.step];
+    $('reset-row').hidden = setup || state.step !== 'enroll';
+    if (setup) showRecover(false);
   }
   function setStep(s, focus) {
     if (s !== 'enroll' && !state.trained) s = 'enroll';
+    if (s !== state.step) showRecover(false);
     state.step = s; tryCap.reset();
     paintSteps();
     if (focus) tryCap.focus();
@@ -1046,13 +1326,16 @@ if (typeof module !== 'undefined') module.exports = KPT;
   $('step-verify').addEventListener('click', function () { setStep('verify', true); });
 
   // ---------- persistence (this browser only; one slot per device type) ----------
-  function save() { try { localStorage.setItem(STORE[state.device], JSON.stringify({ app: 'KeyPrint', device: state.device, samples: state.samples, frr: state.frr })); } catch (e) { } }
+  function save() {
+    if (!account) return;
+    try { localStorage.setItem(STORE[state.device], JSON.stringify({ app: 'KeyPrint', device: state.device, account: account.pwSalt, samples: state.samples, frr: state.frr })); } catch (e) { }
+  }
   function restore() {
     try {
-      var s = localStorage.getItem(STORE[state.device]);
-      if (s) { loadProfile(JSON.parse(s)); return; }
-      var v1 = state.device === 'desktop' && localStorage.getItem('keyprint.v1');   // M1 data on the same origin
-      if (v1) { loadProfile(JSON.parse(v1)); save(); }
+      OLD_KEYS.forEach(function (k) { localStorage.removeItem(k); });
+      if (!account) { var a = JSON.parse(localStorage.getItem(ACCOUNT)); account = KPS.isAccount(a) ? a : null; }
+      var s = account && localStorage.getItem(STORE[state.device]);
+      if (s) loadProfile(JSON.parse(s));
     } catch (e) { }
   }
   function useDevice(dev) {
@@ -1068,10 +1351,10 @@ if (typeof module !== 'undefined') module.exports = KPT;
     keypadOn = on;
     if (changed) {
       useDevice(on ? 'mobile' : 'desktop');
-      if (document.activeElement && document.activeElement.blur && on && document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'password') document.activeElement.blur();
+      if (document.activeElement && document.activeElement.blur && on && document.activeElement.id === 'pass') document.activeElement.blur();
     }
     tryCap.mode();
-    setStatus(keypadOn ? 'Tap the keys: “.” first, Return last. A wrong key discards the attempt.' : 'Start with “.”. Backspace or a wrong key discards the attempt; Esc restarts.');
+    if (account) setStatus(keypadOn ? 'Tap your password, then ⏎. ⌫ discards the attempt.' : 'Type your password, then Return. Backspace discards the attempt; Esc restarts.');
   }
 
   function render() {
@@ -1085,14 +1368,15 @@ if (typeof module !== 'undefined') module.exports = KPT;
   window.KeyPrint = {
     lastVector: function () { return state.lastX && state.lastX.slice(); }, device: function () { return state.device; },
     keypad: function () { return keypadOn; }, samples: function () { return state.samples.length; }, trained: function () { return !!state.trained; },
-    featureNames: function () { return names().slice(); }
+    hasAccount: function () { return !!account; }, busy: function () { return checking; },
+    featureNames: function () { var n = dim(); return n ? (state.device === 'mobile' ? KPT.featureNames((n + 2) / 5) : KPF.names((n + 2) / 3)) : []; }
   };
 
   keypadOn = coarse;
   state.device = keypadOn ? 'mobile' : 'desktop';
   restore(); render();
   tryCap.mode();
-  if (keypadOn) setStatus('Tap the keys: “.” first, Return last. A wrong key discards the attempt.');
+  if (account) setStatus(keypadOn ? 'Tap your password, then ⏎. ⌫ discards the attempt.' : 'Type your password, then Return. Backspace discards the attempt; Esc restarts.');
 })();
 </script>
 
