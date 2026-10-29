@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>
-/* Layout: instrument panel — capture strip on top, live readouts left, profile/calibration rail right. */
+/* Layout: Try it (two steps and a password box), Benchmark, How it works (plain walkthrough). */
 :root{
   --bg:#f3ede2; --surface:#fdfaf4; --ink:#211b15; --muted:#6e6253; --line:#e3d8c6;
   --accent:#5a2d82; --accent-soft:#ece3f3;
@@ -48,29 +48,12 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .status.bad{color:var(--bad)} .status.ok{color:var(--ok)}
 .hint{font-size:13px;color:var(--muted);margin:0}
 .mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
-.progress{display:flex;gap:6px;flex-wrap:wrap}
-.dot{width:22px;height:8px;border-radius:2px;background:var(--line)}
-.dot.on{background:var(--accent)}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .btn{font:inherit;font-size:14px;font-weight:600;padding:7px 12px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
 .btn:hover{border-color:var(--accent)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
 .btn.danger{color:var(--bad)} .btn.danger.armed{background:var(--bad);color:var(--surface);border-color:var(--bad)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-.verdicts{display:grid;gap:12px}
-.det{display:grid;grid-template-columns:150px minmax(0,1fr) 84px;gap:12px;align-items:center}
-@media (max-width:520px){.det{grid-template-columns:minmax(0,1fr) 84px}.det .bar{grid-column:1/-1;grid-row:2}}
-.det-name{font-weight:600;font-size:14px}
-.det-name span{display:block;font-family:var(--font-mono);font-size:11px;color:var(--muted);font-weight:400}
-.bar{position:relative;height:22px;background:var(--bg);border:1px solid var(--line);border-radius:4px;overflow:hidden}
-.bar .fill{position:absolute;inset:0 auto 0 0;background:var(--ok);opacity:.85;transition:width .25s}
-.bar.rej .fill{background:var(--bad)}
-.bar .thr{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink)}
-.bar .lbl{position:absolute;right:6px;top:1px;font-family:var(--font-mono);font-size:11px;color:var(--ink)}
-.pill{font-family:var(--font-mono);font-size:12px;font-weight:700;letter-spacing:.06em;text-align:center;padding:5px 0;border-radius:5px}
-.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.idle{background:var(--bg);color:var(--muted)}
-.overall{font-family:var(--font-display);font-size:22px;font-weight:700}
-.overall.ok{color:var(--ok)} .overall.bad{color:var(--bad)} .overall.idle{color:var(--muted)}
 table{border-collapse:collapse;width:100%;font-size:13px}
 th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
 th{font-weight:600;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
@@ -78,19 +61,9 @@ td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric
 .scroll{overflow-x:auto;min-width:0}
 aside th,aside td{padding:4px 5px;font-size:12px}
 aside th{font-size:10.5px}
-.z-pos{color:var(--bad)} .z-neg{color:var(--accent)}
 svg text{fill:var(--muted);font-family:var(--font-mono);font-size:10px}
-.slider{display:grid;gap:4px}
-.slider input{width:100%;accent-color:var(--accent)}
-.samples{display:grid;gap:4px;max-height:240px;overflow:auto}
-.sample{display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:12px;padding:3px 6px;border-radius:4px;background:var(--bg)}
-.sample button{border:0;background:none;color:var(--muted);cursor:pointer;font:inherit}
-.sample button:hover{color:var(--bad)}
-textarea{width:100%;min-height:90px;font-family:var(--font-mono);font-size:11px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px}
 .chip{display:inline-block;font-family:var(--font-mono);font-size:11px;font-weight:700;padding:1px 5px;border-radius:3px}
 .chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.bad{background:var(--bad-soft);color:var(--bad)}
-.test-pass{color:var(--ok);font-weight:700} .test-fail{color:var(--bad);font-weight:700}
-.empty{color:var(--muted);font-size:14px;padding:8px 0}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 <style>
@@ -143,23 +116,7 @@ body{margin:0}
 .steps button.done b{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
 .steps button:disabled{cursor:not-allowed;opacity:.55}
 @media (max-width:640px){.steps{grid-template-columns:minmax(0,1fr)}}
-.banner{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:8px;background:var(--accent-soft);color:var(--ink);border:1px solid var(--accent)}
-.banner p{margin:0;max-width:70ch}
-.viz2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
-@media (max-width:880px){.viz2{grid-template-columns:minmax(0,1fr)}}
-.viz2 figure{margin:0;display:grid;gap:6px;min-width:0}
-.viz2 figcaption{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
 .swatch{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px}
-.callout{border-left:3px solid var(--warn);padding:2px 0 2px 12px;display:grid;gap:6px}
-.callout p{margin:0;font-size:14px;max-width:70ch}
-.callout strong{color:var(--ink)}
-.counter{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
-.how{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
-@media (max-width:880px){.how{grid-template-columns:minmax(0,1fr)}}
-.how .panel p,.how .panel li{margin:0;max-width:68ch;text-wrap:pretty}
-.how .panel ul,.how .panel ol{margin:0;padding-left:20px;display:grid;gap:6px}
-.how h3{margin:0;font-family:var(--font-display);font-size:18px;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
-.how .wide{grid-column:1/-1}
 .diagram{width:100%;max-width:560px;height:auto}
 .diagram text{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
 .diagram .k{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
@@ -167,8 +124,10 @@ body{margin:0}
 .diagram .m{stroke:var(--ink);stroke-width:1.25;fill:none}
 .diagram .ml{fill:var(--ink)}
 .diagram .ax{stroke:var(--line);stroke-width:1}
+.how .diagram{max-width:460px}
+.how .diagram text{font-family:var(--font-body);font-size:15px}
 footer{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
-footer a,.how a{color:var(--accent)}
+footer a{color:var(--accent)}
 .drop:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
 <style>
@@ -190,7 +149,6 @@ button,a,label,summary,select,input{touch-action:manipulation}
   .keys{display:grid;grid-template-columns:repeat(10,minmax(0,1fr)) minmax(0,1.5fr);gap:4px}
   .keys .key,.keys .key.wide{width:auto;height:34px;font-size:14px}
   #pass{font-size:17px;letter-spacing:.12em}
-  .det-name span{display:inline;margin-left:6px}
 }
 /* phones: compact step chips and tabs so the keypad sits higher on the page */
 @media (max-width:640px){
@@ -204,23 +162,10 @@ button,a,label,summary,select,input{touch-action:manipulation}
 @media (max-width:420px){.tab-long{display:none}}
 /* touch targets ≥ 44 px on touch screens and narrow windows */
 @media (pointer:coarse),(max-width:640px){
-  .btn,.tabs button,.seg button,.steps button,.sel,.sample button,#b-revert{min-height:44px}
+  .btn,.tabs button,.seg button,.steps button,.sel,#b-revert{min-height:44px}
   .seg.small button{min-height:44px;padding:4px 14px}
-  .sample button{min-width:44px}
-  details>summary{min-height:44px;display:flex;align-items:center}
-  .slider input[type=range]{height:44px}
   .footer-link,footer a{display:inline-flex;align-items:center;min-height:44px}
 }
-/* capture mode switch */
-.modebar{justify-content:space-between;gap:8px 12px}
-.switch{display:inline-flex;align-items:center;gap:10px;min-height:44px;cursor:pointer;font-weight:600;font-size:14px;user-select:none;-webkit-user-select:none}
-.switch input{appearance:none;-webkit-appearance:none;width:42px;height:26px;margin:0;border-radius:13px;background:var(--line);position:relative;cursor:pointer;flex:none;transition:background .15s}
-.switch input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
-.switch input:checked{background:var(--accent)}
-.switch input:checked::after{transform:translateX(16px)}
-.switch small{display:block;font-weight:400;color:var(--muted);font-size:12px}
-.badge.warn{background:var(--bad-soft);color:var(--bad)}
-.testing{border-color:var(--bad);background:var(--bad-soft)}
 /* on-screen keypad: no selection, no callout, no double-tap zoom, no scroll stealing the pointer */
 .keypad{display:grid;gap:8px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--bg);
   touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;max-width:520px;width:100%;margin:0 auto}
@@ -242,7 +187,6 @@ body{font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
 h1{font-family:var(--font-display);font-size:clamp(40px,7vw,60px);font-weight:600;line-height:1;letter-spacing:-.03em;font-variation-settings:"opsz" 144}
 .tagline{font-family:var(--font-display);font-style:italic;font-size:clamp(17px,2.2vw,20px);margin-top:8px}
 h2{font-size:12px;letter-spacing:.14em}
-.how h3{font-size:22px;font-weight:600;letter-spacing:-.015em;font-variation-settings:"opsz" 72}
 .tabs button{font-size:15px;font-weight:500}
 .panel{border-radius:14px;padding:22px;box-shadow:0 1px 0 rgba(60,40,10,.04),0 10px 28px -20px rgba(60,40,10,.22)}
 .btn,.seg,.sel{border-radius:999px}
@@ -259,11 +203,27 @@ h2{font-size:12px;letter-spacing:.14em}
 #pass::placeholder{font-family:var(--font-body);font-size:15px;letter-spacing:.01em;color:var(--muted)}
 .try .status{font-family:var(--font-display);font-size:19px;line-height:1.45;text-align:center;color:var(--ink);min-height:2.9em;text-wrap:balance}
 .try .status.ok{color:var(--ok)} .try .status.bad{color:var(--bad)}
-/* How it works: live session readouts first, then the method */
-.how-group{grid-column:1/-1;margin:12px 0 -6px;display:grid;gap:2px}
-.how-group h2{font-family:var(--font-display);font-size:30px;font-weight:600;letter-spacing:-.02em;text-transform:none;color:var(--ink)}
-.how-group p{margin:0;color:var(--muted)}
-.how-group:first-child{margin-top:0}
+/* Try it: reset sits under the message */
+.stage-foot{display:flex;justify-content:center}
+/* How it works: one plain walkthrough, numbered steps down a line */
+.how{max-width:720px;width:100%;margin:0 auto;display:grid;gap:28px}
+.how h3{margin:0;font-family:var(--font-display);font-size:22px;font-weight:600;letter-spacing:-.015em;line-height:1.25;text-wrap:balance;font-variation-settings:"opsz" 72}
+.how p,.how li{margin:0;text-wrap:pretty}
+.how-intro{display:grid;gap:6px}
+.how-intro h2{font-family:var(--font-display);font-size:clamp(30px,5vw,40px);font-weight:600;letter-spacing:-.02em;text-transform:none;color:var(--ink);line-height:1.1}
+.how-intro p{color:var(--muted);font-size:17px}
+.walk{list-style:none;margin:0;padding:0;counter-reset:walk;display:grid}
+.walk>li{counter-increment:walk;position:relative;padding:0 0 30px 64px;display:grid;gap:10px}
+.walk>li::before{content:counter(walk);position:absolute;left:0;top:-4px;width:42px;height:42px;border-radius:50%;background:var(--accent);color:var(--surface);display:grid;place-items:center;font:600 19px var(--font-display)}
+.walk>li::after{content:"";position:absolute;left:20px;top:44px;bottom:6px;width:2px;background:var(--line)}
+.walk>li:last-child{padding-bottom:0}
+.walk>li:last-child::after{display:none}
+.walk ul{margin:0;padding-left:20px;display:grid;gap:4px}
+.how-notes{display:grid;gap:12px;padding:18px 20px;border-radius:14px;background:var(--accent-soft)}
+.how-reset{display:flex;flex-wrap:wrap;gap:14px 20px;align-items:center;justify-content:space-between;padding:20px 22px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.how-reset>div{display:grid;gap:4px;flex:1 1 260px}
+.how-reset p{color:var(--muted)}
+@media (max-width:520px){.walk>li{padding-left:52px}.walk>li::before{width:36px;height:36px;font-size:17px}.walk>li::after{left:17px;top:38px}}
 @media (max-width:640px){.panel{padding:16px}.try .steps{grid-template-columns:repeat(2,minmax(0,1fr))}.try .steps button small{display:block}#pass{font-size:20px}}
 </style>
 <!--HEAD-END-->
@@ -297,6 +257,7 @@ h2{font-size:12px;letter-spacing:.14em}
     <input id="pass" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="status" placeholder="type .tie5Roanl, then Return">
     <div class="keypad" id="keypad" role="group" aria-label="On-screen keypad for .tie5Roanl and Return" hidden></div>
     <div class="status" id="status" aria-live="polite">Start with “.”. Backspace or a wrong key discards the attempt; Esc restarts.</div>
+    <div class="stage-foot"><button class="btn danger" id="reset">Reset</button></div>
   </section>
   </div><!-- /view-try -->
 
@@ -371,149 +332,63 @@ h2{font-size:12px;letter-spacing:.14em}
 
   <!-- ===================== HOW IT WORKS ===================== -->
   <div id="view-how" class="view how" role="tabpanel" aria-labelledby="tab-how" tabindex="-1" hidden>
-    <div class="how-group"><h2>Your session</h2><p>Live readouts from what you type on the Try it tab.</p></div>
+    <div class="how-intro">
+      <h2>How it works</h2>
+      <p>What the page does behind the scenes, from your first key press to “accepted” or “rejected”. No maths needed.</p>
+    </div>
 
-    <section class="panel wide" aria-labelledby="cap-live-h">
-      <div class="row" style="justify-content:space-between">
-        <h3 id="cap-live-h">Last attempt</h3>
-        <span class="counter" id="rejects" title="Attempts discarded this session (typo, Backspace, focus lost, touch cancelled)">0 discarded</span>
-      </div>
-      <div class="row modebar">
-        <label class="switch"><input type="checkbox" id="force-keypad" role="switch" aria-describedby="mode-note"><span>On-screen keypad<small id="mode-sub">Uses your mobile profile</small></span></label>
-        <span class="badge" id="mode-badge">Desktop profile · keyboard</span>
-      </div>
-      <p class="banner testing" id="mode-note" hidden><span><strong>Testing mode:</strong> keypad forced on a device without a touch screen. Mouse clicks are not finger taps, so this only checks the plumbing; enroll on a phone for real numbers.</span></p>
-      <div class="viz2">
-        <figure>
-          <figcaption>Key timeline · last attempt</figcaption>
-          <div class="scroll"><svg id="timeline" width="100%" height="150" role="img" aria-label="Key hold timeline for the last attempt"></svg></div>
-        </figure>
-        <figure>
-          <figcaption>Rhythm vs your profile · 31 features</figcaption>
-          <div class="scroll"><svg id="rhythm" width="100%" height="190" role="img" aria-label="Each timing feature of the last attempt against your profile mean plus or minus one standard deviation"></svg></div>
-          <p class="hint"><span class="swatch" style="background:var(--accent)"></span>this attempt · <span class="swatch" style="background:var(--muted);opacity:.35"></span>your mean ± 1 SD · <span class="swatch" style="background:var(--bad)"></span>beyond 2 SD. Grouped by key: hold, press→press, release→press.</p>
-        </figure>
-      </div>
-    </section>
+    <ol class="walk">
+      <li>
+        <h3>Everyone types the same password</h3>
+        <p>The password is <span class="mono">.tie5Roanl</span>, then Return. It is printed right on the page, so it is not a secret. The page does not care much <em>what</em> you type. It cares <em>how</em> you type it.</p>
+      </li>
+      <li>
+        <h3>The page times every key</h3>
+        <p>For each key, the page notes the moment you press it down and the moment you let go. From that it gets two kinds of numbers:</p>
+        <svg class="diagram" viewBox="0 0 460 120" role="img" aria-labelledby="walk-diag-t">
+          <title id="walk-diag-t">Two keys, t then i, on a time line. Hold is how long t stays down. Gap is the time from letting go of t to pressing i.</title>
+          <rect class="k" x="20" y="44" width="170" height="30" rx="5"/><text class="kl" x="34" y="64">t</text>
+          <rect class="k" x="260" y="44" width="150" height="30" rx="5"/><text class="kl" x="274" y="64">i</text>
+          <path class="m" d="M20 36 V28 H190 V36"/><text class="ml" x="105" y="20" text-anchor="middle">hold</text>
+          <path class="m" d="M190 82 V90 H260 V82"/><text class="ml" x="225" y="106" text-anchor="middle">gap</text>
+          <line class="ax" x1="10" y1="116" x2="450" y2="116"/>
+        </svg>
+        <ul>
+          <li><strong>Hold:</strong> how long each key stays pressed.</li>
+          <li><strong>Gap:</strong> how long you wait between one key and the next.</li>
+        </ul>
+        <p>One full password gives 31 of these timings. On a phone, the page shows its own keypad and also notes where your finger lands on each key.</p>
+      </li>
+      <li>
+        <h3>You enroll by typing it 10 times</h3>
+        <p>In step 1 (Enroll) you type the password 10 times at your normal speed. A typo, Backspace or wrong key throws that try away, and you simply type it again. Only clean tries count.</p>
+      </li>
+      <li>
+        <h3>The page learns your rhythm</h3>
+        <p>After the 10th try, the page works out your usual hold and gap for every key, and how much they normally wobble from try to try. That set of numbers is your profile: a fingerprint made of timing instead of skin.</p>
+      </li>
+      <li>
+        <h3>Verify compares a new try with your profile</h3>
+        <p>In step 2 (Verify) you type the password once more. The page measures the same 31 timings and puts them next to your profile. Three separate checks each decide “close enough” or “too different”. If at least two of them say close enough, you are <strong>accepted</strong>.</p>
+      </li>
+      <li>
+        <h3>Why someone else gets rejected</h3>
+        <p>A friend can type every letter right, but they hold keys for different lengths and pause in different places. Each difference is small, but across 31 timings they add up, so the checks say “too different” and the try is <strong>rejected</strong>. To see it, enroll yourself, then hand the keyboard to someone else.</p>
+      </li>
+    </ol>
 
-    <section class="panel" id="enroll-panel" aria-labelledby="en-h">
-      <div class="row" style="justify-content:space-between"><h3 id="en-h">Enrollment</h3><span class="mono hint" id="en-count">0 / 10</span></div>
-      <div class="progress" id="progress" aria-hidden="true"></div>
-      <p class="hint" id="en-msg">Type the passphrase 10 times at your natural pace. Each clean attempt becomes a 31-feature sample. Training runs automatically after the 10th.</p>
-      <div class="callout">
-        <p><strong>Why 10 reps is a demo, not a lock.</strong> On the CMU benchmark, training on 10 reps gives about twice the error of 200 reps (mean EER 0.21–0.23 vs 0.10–0.11), and a 5% false-reject target set from only 10 scores lets through 8–17% false rejects. Expect the page to reject you now and then. <a href="#" data-goto="bench">See the curve</a>.</p>
-      </div>
-    </section>
+    <div class="how-notes">
+      <p><strong>It is not perfect.</strong> Your own rhythm changes when you are tired, rushed or on a different keyboard, so sometimes it will reject you too. Treat it as a demo of the idea, used alongside a password, never instead of one.</p>
+      <p><strong>Your data stays here.</strong> Every timing and your profile are kept in this browser only. Nothing is sent anywhere.</p>
+    </div>
 
-    <section class="panel" aria-labelledby="ver-h">
-      <h3 id="ver-h">Verdict</h3>
-      <div class="overall idle" id="overall" aria-live="polite">Waiting for a trained profile</div>
-      <div class="verdicts" id="verdicts"></div>
+    <div class="how-reset">
       <div>
-        <h2 style="margin-bottom:6px">Largest deviations from your profile</h2>
-        <div class="scroll" id="devs"><div class="empty">Shown after each verify attempt: features ranked by |x − mean| / mean absolute deviation.</div></div>
+        <h3>Start over</h3>
+        <p>Reset deletes your 10 enrollment tries so you can enroll again from scratch.</p>
       </div>
-      <div>
-        <h2 style="margin-bottom:6px">Verify attempts</h2>
-        <div class="scroll" id="tally"><div class="empty">Each verify attempt is tallied here with every detector’s vote. Hand the keyboard to someone else to see whether it rejects them.</div></div>
-      </div>
-    </section>
-
-    <section class="panel" aria-labelledby="pr-h">
-      <h3 id="pr-h">Profile</h3>
-      <div class="slider">
-        <label for="frr" class="row" style="justify-content:space-between"><span>Target false-reject rate</span><span class="mono" id="frr-val">5%</span></label>
-        <input id="frr" type="range" min="0" max="30" step="1" value="5" aria-describedby="frr-help">
-        <span class="hint" id="frr-help">Thresholds are leave-one-out score quantiles at 1 − FRR.</span>
-      </div>
-      <div class="scroll" id="thr-table"><div class="empty">No profile trained yet.</div></div>
-      <div class="samples" id="samples"></div>
-      <div class="row">
-        <button class="btn" id="export">Export JSON</button>
-        <button class="btn" id="copy">Copy JSON</button>
-        <button class="btn" id="import-btn">Import file</button>
-        <input id="import-file" type="file" accept="application/json,.json" hidden aria-label="Import profile or M1 export">
-        <button class="btn danger" id="reset">Reset</button>
-      </div>
-      <details>
-        <summary class="hint" style="cursor:pointer">Paste profile JSON (M2 profile or M1 export)</summary>
-        <label for="json-box" class="sr-only">Profile JSON</label>
-        <textarea id="json-box" spellcheck="false" placeholder='{"app":"KeyPrint", ...}'></textarea>
-        <div class="row"><button class="btn" id="import-text">Import pasted JSON</button><button class="btn" id="load-example">Load synthetic example</button></div>
-      </details>
-      <div class="status" id="pr-status" aria-live="polite"></div>
-      <p class="privacy"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 7V5a4 4 0 0 1 8 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="2.5" y="7" width="11" height="8" rx="1.5" fill="currentColor"/></svg>All data stays in this browser. Nothing is uploaded.</p>
-    </section>
-
-    <section class="panel" aria-labelledby="st-h">
-      <div class="row" style="justify-content:space-between"><h3 id="st-h">Synthetic self-test</h3><button class="btn" id="run-test">Run again</button></div>
-      <p class="hint">10 genuine samples train each detector; 200 held-out genuine and 200 impostor attempts (mean shifted 1.5 SD per feature) are scored.</p>
-      <div class="scroll" id="test-out"></div>
-    </section>
-
-    <div class="how-group"><h2>The method</h2><p>What happens between your keypress and the verdict.</p></div>
-
-    <section class="panel wide" aria-labelledby="h-feat">
-      <h3 id="h-feat">1 · Every attempt becomes 31 timings</h3>
-      <p>The passphrase is the CMU benchmark’s <span class="mono">.tie5Roanl</span> plus Return: 11 keys. For each key KeyPrint records when it went down and up (browser event timestamps), then computes three kinds of interval, in the same column order as the CMU dataset:</p>
-      <svg class="diagram" viewBox="0 0 560 168" role="img" aria-labelledby="diag-t">
-        <title id="diag-t">Two keys, t then i, on a time axis. H.t is how long t is held; DD.t.i runs from t down to i down; UD.t.i runs from t up to i down.</title>
-        <path class="m" d="M60 24 V18 H230 V24"/><text class="ml" x="145" y="13" text-anchor="middle">H.t (hold)</text>
-        <rect class="k" x="60" y="30" width="170" height="26" rx="4"/><text class="kl" x="72" y="48">t</text>
-        <path class="m" d="M230 58 V68 H300 V72"/><text class="ml" x="308" y="66">UD.t.i (release → press)</text>
-        <rect class="k" x="300" y="76" width="150" height="26" rx="4"/><text class="kl" x="312" y="94">i</text>
-        <line class="m" x1="60" y1="58" x2="60" y2="110" stroke-dasharray="3 3"/>
-        <path class="m" d="M60 110 V116 H300 V104"/><text class="ml" x="180" y="131" text-anchor="middle">DD.t.i (press → press)</text>
-        <line class="ax" x1="20" y1="142" x2="540" y2="142"/>
-        <text x="540" y="160" text-anchor="end">time →</text>
-        <text x="20" y="160">UD = DD − H; negative when keys overlap</text>
-      </svg>
-      <p>11 hold times (H) + 10 press-to-press (DD) + 10 release-to-press (UD) = 31 features, in seconds. Keyup is matched by physical key, so letting go of Shift before R is fine. A typo, Backspace or leaving the field throws the attempt away; stray keys before “.” and Ctrl/Alt/Meta chords are ignored.</p>
-    </section>
-
-    <section class="panel" aria-labelledby="h-det">
-      <h3 id="h-det">2 · Three detectors vote</h3>
-      <ul>
-        <li><strong>Scaled Manhattan.</strong> Sum over features of |x − mean| divided by the mean absolute deviation. Simple and the best performer in Killourhy &amp; Maxion’s comparison.</li>
-        <li><strong>Mahalanobis.</strong> Distance to the mean that accounts for features moving together (a slow typist is slow everywhere).</li>
-        <li><strong>Nearest neighbor.</strong> Mahalanobis distance to the closest single enrollment sample, which tolerates a profile with two styles.</li>
-      </ul>
-      <p>Each detector accepts if its score is under its own threshold. The overall verdict is a 2-of-3 majority.</p>
-    </section>
-
-    <section class="panel" aria-labelledby="h-shr">
-      <h3 id="h-shr">3 · Shrinkage covariance</h3>
-      <p>With 10 samples and 31 features the sample covariance has rank 9 at most, so it cannot be inverted. KeyPrint shrinks the off-diagonal entries toward zero by a factor λ chosen from the data (Schäfer–Strimmer, clipped to at least 0.05), keeps the variances (floored at 1 ms SD), and inverts with a Cholesky factorization. On the full benchmark this also edges the paper’s plain-covariance Mahalanobis numbers.</p>
-    </section>
-
-    <section class="panel" aria-labelledby="h-loo">
-      <h3 id="h-loo">4 · Thresholds from leave-one-out</h3>
-      <p>To pick a threshold without asking you to type even more, KeyPrint trains on 9 of your 10 samples and scores the 10th, ten times. The threshold is the (1 − target FRR) quantile of those 10 out-of-sample scores, linearly interpolated: the 95th percentile for the default 5% target. The slider moves it live.</p>
-    </section>
-
-    <section class="panel" aria-labelledby="h-size">
-      <h3 id="h-size">5 · Why 10 reps gives about twice the error</h3>
-      <p>Mean EER on the CMU data with the same test set and only the training size changed:</p>
-      <div class="scroll" id="how-size"></div>
-      <p>A 95th percentile of 10 scores is noisy and biased low, and 10 reps typed in one sitting miss the drift between sessions. The false-reject rate only approaches its 5% target from about 100 reps.</p>
-    </section>
-
-    <section class="panel wide" aria-labelledby="h-mob">
-      <h3 id="h-mob">6 · On a phone: keypad taps, 31 + 22 features</h3>
-      <p>Soft keyboards report unreliable key timings (many send keydown and keyup together when the finger lifts, and autocorrect gets in the way), so on a touch screen KeyPrint shows its own keypad and never opens the system keyboard. Each key records <span class="mono">pointerdown</span> and <span class="mono">pointerup</span> with the event timestamp: hold = down → up, DD and UD exactly as on a keyboard, so the same 31 timing features. Overlapping taps (a second thumb landing before the first lifts) are allowed and give a negative UD, just like rolling keys on a keyboard.</p>
-      <p>On top of that, every tap records where it landed relative to the key centre, in key widths and heights (−0.5 … +0.5): an x and y offset for each of the 11 keys, 22 more features. The same three detectors run on the 53-number vector unchanged. Phone profiles are stored separately from keyboard profiles and are never scored against each other.</p>
-      <p>Whether tap position actually helps is an open question here: the CMU benchmark is keyboard-only. <span class="mono">bench-mobile.js</span> compares per-user EER with timing only against timing + position on 20-rep phone sessions, so far only on synthetic volunteers.</p>
-    </section>
-
-    <section class="panel wide" aria-labelledby="h-lim">
-      <h3 id="h-lim">7 · Limits and privacy</h3>
-      <ul>
-        <li>Rhythm drifts across days, keyboards and moods; a profile from one sitting will reject you more often later.</li>
-        <li>This is a demo of a research technique, not production authentication. Use it alongside a password, never instead of one.</li>
-        <li>Desktop and phone profiles are kept apart and never compared: a keyboard rhythm and a thumb rhythm are different signals.</li>
-        <li>All timings and profiles stay in your browser (localStorage). Export and import are files you control.</li>
-      </ul>
-    </section>
+      <button class="btn danger" id="how-reset">Reset and start over</button>
+    </div>
   </div>
 
   <footer>
@@ -968,13 +843,13 @@ if (typeof module !== 'undefined') module.exports = KPT;
   'use strict';
   var N_ENROLL = 10;
   // Desktop and phone profiles live under separate keys and are never scored against each other.
-  var STORE = { desktop: 'keyprint.profile.v2', mobile: 'keyprint.profile.mobile.v1' }, KEYPAD_PREF = 'keyprint.keypad';
+  var STORE = { desktop: 'keyprint.profile.v2', mobile: 'keyprint.profile.mobile.v1' };
   var $ = function (id) { return document.getElementById(id); };
   var LABEL = { period: '.', five: '5', 'Shift.r': 'R', Return: '⏎' };
   var lab = function (k) { return LABEL[k] || k; };
   var keyName = function (k) { return k === 'Enter' ? 'Return' : k; };
 
-  var state = { device: 'desktop', step: 'enroll', samples: [], frr: 0.05, trained: null, history: [], lastX: null, lastKs: null };
+  var state = { device: 'desktop', step: 'enroll', samples: [], frr: 0.05, trained: null, lastX: null };
   var dim = function () { return state.device === 'mobile' ? KPT.DIM : KP.DIM; };
   var names = function () { return state.device === 'mobile' ? KPT.FEATURE_NAMES : KP.FEATURE_NAMES; };
 
@@ -984,7 +859,7 @@ if (typeof module !== 'undefined') module.exports = KPT;
   var isTouch = function () { return coarse || touchSeen; };
 
   // ---------- capture controller ----------
-  /** o: {keys, input, keypad, status(msg, kind), rejects(n), onStart(), onComplete(r, device, pointer), blocked() -> message|null} */
+  /** o: {keys, input, keypad, status(msg, kind), onStart(), onComplete(r, device, pointer), blocked() -> message|null} */
   function Capturer(o) {
     var kcap = KPC.createCapture(), tcap = KPT.createTapCapture(), errPos = null, pressed = {}, ptypes = {};
     KP.KEY_NAMES.forEach(function (k) {
@@ -1027,7 +902,6 @@ if (typeof module !== 'undefined') module.exports = KPT;
       var why = r.reason === 'backspace' ? 'Backspace used' : r.reason === 'blur' ? 'Focus left the field'
         : r.reason === 'cancel' ? 'Touch cancelled (the finger slid off or the browser took over)' : r.reason === 'hidden' ? 'Page was hidden'
         : 'Wrong key: expected “' + keyName(r.want) + '” at position ' + (r.pos + 1) + ', got “' + keyName(r.got) + '”';
-      o.rejects(total());
       o.status(why + '. Attempt discarded (' + total() + ' this session); start again with “.”', 'bad');
     }
     function handle(r) {
@@ -1054,13 +928,13 @@ if (typeof module !== 'undefined') module.exports = KPT;
     // a finger on the text field means a touch screen: switch to the keypad instead of opening the system keyboard
     o.input.addEventListener('pointerdown', function (e) {
       if (e.pointerType !== 'touch') return;
-      e.preventDefault(); touchSeen = true; setKeypad(true, 'auto');
+      e.preventDefault(); touchSeen = true; setKeypad(true);
     });
     // on-screen keypad: pointer events, e.timeStamp, overlapping taps matched by pointerId
     o.keypad.addEventListener('pointerdown', function (e) {
       var b = e.target.closest('[data-k]'); if (!b || !o.keypad.contains(b)) return;
       e.preventDefault();   // no focus (so no system keyboard), no selection, no emulated mouse events
-      if (e.pointerType === 'touch' && !touchSeen) { touchSeen = true; paintMode(); }
+      if (e.pointerType === 'touch') touchSeen = true;
       var msg = o.blocked && o.blocked(); if (msg) { o.status(msg, 'bad'); return; }
       try { b.setPointerCapture(e.pointerId); } catch (err) { /* synthetic events have no active pointer */ }
       var off = KPT.offset(e.clientX, e.clientY, b.getBoundingClientRect());
@@ -1091,87 +965,19 @@ if (typeof module !== 'undefined') module.exports = KPT;
   function setStatus(msg, kind) { var s = $('status'); s.textContent = msg; s.className = 'status' + (kind ? ' ' + kind : ''); }
   var tryCap = Capturer({
     keys: $('keys'), input: $('pass'), keypad: $('keypad'), status: setStatus,
-    rejects: function (n) { $('rejects').textContent = n + ' discarded'; },
     onStart: function () { setStatus('Recording…'); },
     onComplete: function (r, device) { finishAttempt(r, device); }
   });
 
   function finishAttempt(r, device) {
     if (device !== state.device || r.x.length !== dim()) { setStatus('Capture mode changed mid-attempt; try again.', 'bad'); return; }
-    state.lastKs = r.ks; state.lastX = r.x; drawTimeline(r.ks);
+    state.lastX = r.x;
     if (state.step === 'enroll') onEnrollSample(r.x); else onVerify(r.x);
-    drawRhythm();
-  }
-
-  // ---------- timeline ----------
-  function drawTimeline(ks) {
-    var svg = $('timeline'), W = Math.max(svg.clientWidth || 520, 280), rowH = 15, top = 6, left = 30, right = 10;
-    var t0 = ks[0].down, t1 = Math.max.apply(null, ks.map(function (k) { return k.up; }));
-    var span = Math.max(t1 - t0, 0.001), sx = function (t) { return left + (t - t0) / span * (W - left - right); };
-    var h = top + ks.length * rowH + 18; svg.setAttribute('height', h); svg.setAttribute('viewBox', '0 0 ' + W + ' ' + h);
-    var out = '';
-    var step = span > 2 ? 0.5 : span > 0.8 ? 0.25 : 0.1;
-    if ((W - left - right) / (span / step) < 34) step *= 2;
-    for (var t = 0; t <= span + 1e-9; t += step) {
-      var X = sx(t0 + t);
-      out += '<line x1="' + X + '" x2="' + X + '" y1="' + top + '" y2="' + (h - 16) + '" stroke="var(--line)" stroke-width="1"/>';
-      out += '<text x="' + X + '" y="' + (h - 4) + '" text-anchor="middle">' + t.toFixed(2) + 's</text>';
-    }
-    ks.forEach(function (k, i) {
-      var y = top + i * rowH;
-      out += '<text x="' + (left - 6) + '" y="' + (y + 9) + '" text-anchor="end">' + lab(KP.KEY_NAMES[i]) + '</text>';
-      out += '<rect x="' + sx(k.down) + '" y="' + (y + 1) + '" width="' + Math.max(2, sx(k.up) - sx(k.down)) + '" height="' + (rowH - 3) + '" rx="2" fill="var(--accent)"/>';
-    });
-    svg.innerHTML = out;
-  }
-  function drawTimelineEmpty() {
-    var svg = $('timeline'); svg.setAttribute('height', 40); svg.removeAttribute('viewBox');
-    svg.innerHTML = '<text x="8" y="24">Your last attempt’s key holds appear here.</text>';
-  }
-
-  // ---------- rhythm chart (from M1): bars = last attempt, band = profile mean ± 1 SD; timing features only ----------
-  function drawRhythm() {
-    var svg = $('rhythm'), x = state.lastX && state.lastX.slice(0, KP.DIM);
-    if (!x) { svg.setAttribute('height', 40); svg.removeAttribute('viewBox'); svg.innerHTML = '<text x="8" y="24">Each timing of your last attempt, against your profile.</text>'; return; }
-    var st = state.samples.length >= 2 ? KPC.featureStats(state.samples.map(function (s) { return s.slice(0, KP.DIM); })) : null;
-    var W = Math.max(svg.clientWidth || 520, 280), H = 190, l = 46, r = 6, t = 8, b = 28;
-    var ms = function (v) { return v * 1000; };
-    var hi = 0, lo = 0;
-    x.forEach(function (v, j) {
-      hi = Math.max(hi, ms(v)); lo = Math.min(lo, ms(v));
-      if (st) { hi = Math.max(hi, ms(st.mean[j] + st.sd[j])); lo = Math.min(lo, ms(st.mean[j] - st.sd[j])); }
-    });
-    var stepMs = hi - lo > 600 ? 200 : hi - lo > 250 ? 100 : 50;
-    hi = Math.ceil(hi / stepMs) * stepMs; lo = Math.floor(lo / stepMs) * stepMs;
-    var Y = function (v) { return t + (hi - v) / (hi - lo) * (H - t - b); };
-    var n = x.length, cw = (W - l - r) / n, bw = Math.max(3, cw * 0.56), out = '';
-    for (var v = lo; v <= hi + 1e-9; v += stepMs) {
-      out += '<line x1="' + l + '" x2="' + (W - r) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="var(--line)" stroke-width="' + (v === 0 ? 1.5 : 1) + '"/>';
-      out += '<text x="' + (l - 5) + '" y="' + (Y(v) + 3) + '" text-anchor="end">' + v + (v === hi ? ' ms' : '') + '</text>';
-    }
-    x.forEach(function (val, j) {
-      var cx = l + cw * (j + 0.5), name = KP.FEATURE_NAMES[j], v = ms(val), far = false, tip = name + ': ' + v.toFixed(0) + ' ms';
-      if (st) {
-        var m = ms(st.mean[j]), s = ms(st.sd[j]);
-        far = s > 0 && Math.abs(v - m) > 2 * s;
-        tip += ' (profile ' + m.toFixed(0) + ' ± ' + s.toFixed(0) + ')';
-        out += '<rect x="' + (cx - cw * 0.45) + '" y="' + Y(m + s) + '" width="' + (cw * 0.9) + '" height="' + Math.max(1, Y(m - s) - Y(m + s)) + '" fill="var(--muted)" opacity=".3"/>';
-      }
-      var y0 = Y(0), y1 = Y(v);
-      out += '<rect x="' + (cx - bw / 2) + '" y="' + Math.min(y0, y1) + '" width="' + bw + '" height="' + Math.max(1, Math.abs(y1 - y0)) + '" fill="' + (far ? 'var(--bad)' : 'var(--accent)') + '"><title>' + tip + '</title></rect>';
-      if (st) out += '<line x1="' + (cx - cw * 0.45) + '" x2="' + (cx + cw * 0.45) + '" y1="' + Y(ms(st.mean[j])) + '" y2="' + Y(ms(st.mean[j])) + '" stroke="var(--ink)" stroke-width="1.5"/>';
-      if (name.indexOf('H.') === 0) {
-        out += '<text x="' + cx + '" y="' + (H - 12) + '" text-anchor="middle" style="font-size:11px;fill:var(--ink)">' + lab(name.slice(2)) + '</text>';
-        if (j) out += '<line x1="' + (cx - cw / 2) + '" x2="' + (cx - cw / 2) + '" y1="' + t + '" y2="' + (H - b + 4) + '" stroke="var(--line)" stroke-dasharray="2 3"/>';
-      }
-    });
-    out += '<text x="' + l + '" y="' + (H - 1) + '">' + (st ? 'band from ' + st.n + ' enrollment samples' : 'band appears after 2 enrollment samples') + '</text>';
-    svg.setAttribute('height', H); svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.innerHTML = out;
   }
 
   // ---------- enrollment & training ----------
   function onEnrollSample(x) {
-    if (state.samples.length >= N_ENROLL) { setStatus('Enrollment is full. Go to step 2, or delete a sample to replace it.', 'bad'); return; }
+    if (state.samples.length >= N_ENROLL) { setStatus('Enrollment is full. Go to step 2, or Reset to start over.', 'bad'); return; }
     state.samples.push(x);
     setStatus('Sample ' + state.samples.length + ' of ' + N_ENROLL + ' recorded.', 'ok');
     if (state.samples.length === N_ENROLL) {
@@ -1181,211 +987,49 @@ if (typeof module !== 'undefined') module.exports = KPT;
     render();
   }
   function train() { state.trained = state.samples.length >= 3 ? KP.trainAll(state.samples) : null; }
-  function thresholds() {
-    var t = {}; if (!state.trained) return t;
-    KP.DETECTORS.forEach(function (d) { t[d.id] = KP.thresholdAt(state.trained[d.id].loo, state.frr); });
-    return t;
-  }
 
-  // ---------- verify ----------
+  // ---------- verify: 2 of 3 detectors must accept ----------
   function onVerify(x) {
     if (!state.trained) { setStatus('Train a profile first.', 'bad'); return; }
     if (x.length !== state.samples[0].length) { setStatus('This attempt and the profile come from different devices; not compared.', 'bad'); return; }
-    var thr = thresholds(), res = {};
-    KP.DETECTORS.forEach(function (d) {
-      var s = d.score(state.trained[d.id].model, x);
-      res[d.id] = { score: s, thr: thr[d.id], accept: s <= thr[d.id] };
-    });
-    var accepts = KP.DETECTORS.filter(function (d) { return res[d.id].accept; }).length, ok = accepts >= 2;
-    state.history.unshift({ res: res, x: x });
-    state.history = state.history.slice(0, 50);
-    renderVerdicts();
-    renderDevs(KP.deviations(state.trained.manhattan.model, x, 6).map(function (d) { d.name = names()[d.i]; return d; }));
-    renderTally();
+    var accepts = KP.DETECTORS.filter(function (d) {
+      return d.score(state.trained[d.id].model, x) <= KP.thresholdAt(state.trained[d.id].loo, state.frr);
+    }).length, ok = accepts >= 2;
     setStatus(ok ? 'Accepted: ' + accepts + ' of 3 detectors say it is you.' : 'Rejected: only ' + accepts + ' of 3 detectors say it is you.', ok ? 'ok' : 'bad');
   }
-  function renderVerdicts() {
-    var ov = $('overall'), box = $('verdicts'), last = state.history[0], accepts = 0;
-    if (!state.trained) { ov.className = 'overall idle'; ov.textContent = 'Waiting for a trained profile'; box.innerHTML = idleDetectors(); return; }
-    if (!last) { ov.className = 'overall idle'; ov.textContent = 'Ready: type the passphrase to verify'; box.innerHTML = idleDetectors(); return; }
-    var thr = thresholds(), res = {};
-    KP.DETECTORS.forEach(function (d) { var s = last.res[d.id].score; res[d.id] = { score: s, thr: thr[d.id], accept: s <= thr[d.id] }; if (s <= thr[d.id]) accepts++; });
-    ov.className = 'overall ' + (accepts >= 2 ? 'ok' : 'bad');
-    ov.textContent = (accepts >= 2 ? 'ACCEPT' : 'REJECT') + ' · ' + accepts + '/3 detectors';
-    box.innerHTML = KP.DETECTORS.map(function (d) {
-      var r = res[d.id], max = Math.max(r.thr * 2, r.score * 1.08);
-      return '<div class="det"><div class="det-name">' + d.name + '<span>' + d.unit + '</span></div>' +
-        '<div class="bar' + (r.accept ? '' : ' rej') + '" role="img" aria-label="' + d.name + ' score ' + r.score.toFixed(2) + ', threshold ' + r.thr.toFixed(2) + '">' +
-        '<div class="fill" style="width:' + (r.score / max * 100).toFixed(1) + '%"></div>' +
-        '<div class="thr" style="left:' + (r.thr / max * 100).toFixed(1) + '%"></div>' +
-        '<div class="lbl">' + r.score.toFixed(2) + ' / ' + r.thr.toFixed(2) + '</div></div>' +
-        '<div class="pill ' + (r.accept ? 'ok' : 'bad') + '">' + (r.accept ? 'ACCEPT' : 'REJECT') + '</div></div>';
-    }).join('');
-  }
-  function idleDetectors() {
-    return KP.DETECTORS.map(function (d) {
-      return '<div class="det"><div class="det-name">' + d.name + '<span>' + d.unit + '</span></div><div class="bar"></div><div class="pill idle">—</div></div>';
-    }).join('');
-  }
-  var isPos = function (name) { return /^[XY]\./.test(name); };
-  function describe(name) {
-    var t = name.split('.')[0], rest = name.slice(t.length + 1);
-    if (t === 'H') return 'hold ' + lab(rest);
-    if (t === 'X') return 'tap left/right on ' + lab(rest);
-    if (t === 'Y') return 'tap up/down on ' + lab(rest);
-    var a = KP.KEY_NAMES.filter(function (k) { return rest.indexOf(k + '.') === 0 && KP.KEY_NAMES.indexOf(rest.slice(k.length + 1)) >= 0; })[0];
-    var b = rest.slice(a.length + 1);
-    return (t === 'DD' ? 'press ' : 'release ') + lab(a) + ' → press ' + lab(b);
-  }
-  function fmt(name, v) { return isPos(name) ? (v >= 0 ? '+' : '') + (v * 100).toFixed(0) + '% key' : (v * 1000).toFixed(0) + ' ms'; }
-  function direction(name, z) {
-    if (name.indexOf('X.') === 0) return z > 0 ? 'further right' : 'further left';
-    if (name.indexOf('Y.') === 0) return z > 0 ? 'lower' : 'higher';
-    return z > 0 ? 'slower' : 'faster';
-  }
-  function renderDevs(list) {
-    $('devs').innerHTML = '<table><thead><tr><th>Feature</th><th>Meaning</th><th class="num">This attempt</th><th class="num">Profile mean</th><th class="num">Deviation</th></tr></thead><tbody>' +
-      list.map(function (d) {
-        return '<tr><td class="mono">' + d.name + '</td><td>' + describe(d.name) + '</td><td class="num">' + fmt(d.name, d.value) + '</td><td class="num">' +
-          fmt(d.name, d.mean) + '</td><td class="num ' + (d.z > 0 ? 'z-pos' : 'z-neg') + '">' + (d.z > 0 ? '+' : '') + d.z.toFixed(1) + '× MAD ' + direction(d.name, d.z) + '</td></tr>';
-      }).join('') + '</tbody></table>';
-  }
-  function renderTally() {
-    if (!state.history.length) { $('tally').innerHTML = '<div class="empty">Each verify attempt is tallied here with every detector’s vote. Hand the keyboard to someone else to see whether it rejects them.</div>'; return; }
-    var thr = thresholds(), all = state.history;
-    // re-evaluated against current thresholds so the FRR slider updates the tally too
-    var acc = function (h, id) { return h.res[id].score <= thr[id]; };
-    var maj = function (h) { return KP.DETECTORS.filter(function (d) { return acc(h, d.id); }).length >= 2; };
-    var cell = function (k, n) { return n ? k + '/' + n + ' <span class="hint">(' + Math.round(k / n * 100) + '%)</span>' : '—'; };
-    var rows = KP.DETECTORS.map(function (d) {
-      return '<tr><td>' + d.name + '</td><td class="num">' + cell(all.filter(function (h) { return acc(h, d.id); }).length, all.length) + '</td></tr>';
-    }).join('') + '<tr><td><strong>Majority (2 of 3)</strong></td><td class="num"><strong>' + cell(all.filter(maj).length, all.length) + '</strong></td></tr>';
-    var recent = all.slice(0, 8).map(function (h, i) {
-      return '<tr><td>#' + (all.length - i) + '</td>' + KP.DETECTORS.map(function (d) {
-        var a = acc(h, d.id);
-        return '<td><span class="chip ' + (a ? 'ok' : 'bad') + '">' + (a ? 'A' : 'R') + '</span></td>';
-      }).join('') + '</tr>';
-    }).join('');
-    $('tally').innerHTML = '<table><thead><tr><th>Detector</th><th class="num">Accepted (' + all.length + ')</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-      '<table style="margin-top:10px"><thead><tr><th>Recent</th><th>Manh.</th><th>Mahal.</th><th>NN</th></tr></thead><tbody>' + recent + '</tbody></table>';
-  }
 
-  // ---------- profile panel ----------
-  function renderProfile() {
-    $('frr').value = Math.round(state.frr * 100); $('frr-val').textContent = Math.round(state.frr * 100) + '%';
-    var n = state.samples.length;
-    $('en-count').textContent = n + ' / ' + N_ENROLL;
-    $('step-enroll-sub').textContent = n + '/' + N_ENROLL;
-    $('step-enroll').classList.toggle('done', n >= N_ENROLL);
-    $('progress').innerHTML = Array.from({ length: N_ENROLL }, function (_, i) { return '<span class="dot' + (i < n ? ' on' : '') + '"></span>'; }).join('');
-    $('en-msg').textContent = n >= N_ENROLL ? 'Enrollment complete. Delete a sample below to re-record it, or Reset to start over.'
-      : 'Type the passphrase ' + (N_ENROLL - n) + ' more time' + (N_ENROLL - n === 1 ? '' : 's') + ' at your natural pace. Each clean attempt becomes a ' + dim() + '-feature sample' + (state.device === 'mobile' ? ' (31 timings + 22 tap positions)' : '') + '. Training runs after the 10th.';
-    $('samples').innerHTML = state.samples.map(function (x, i) {
-      var total = x.slice(0, KP.DIM).reduce(function (s, v, j) { return KP.FEATURE_NAMES[j].indexOf('DD.') === 0 ? s + v : s; }, 0);
-      var loo = state.trained ? ' · LOO ' + state.trained.manhattan.loo[i].toFixed(1) : '';
-      return '<div class="sample"><span>#' + (i + 1) + ' · ' + total.toFixed(3) + ' s' + loo + '</span><button data-del="' + i + '" aria-label="Delete sample ' + (i + 1) + '">delete</button></div>';
-    }).join('');
-    if (!state.trained) { $('thr-table').innerHTML = '<div class="empty">' + (n ? 'Training needs ' + N_ENROLL + ' samples (' + n + ' so far).' : 'No ' + (state.device === 'mobile' ? 'phone' : 'keyboard') + ' profile trained yet.') + '</div>'; return; }
-    var thr = thresholds();
-    $('thr-table').innerHTML = '<table><thead><tr><th>Detector</th><th class="num">Threshold</th><th class="num">LOO max</th><th class="num">λ</th></tr></thead><tbody>' +
-      KP.DETECTORS.map(function (d) {
-        var t = state.trained[d.id], lam = t.model.lambda;
-        return '<tr><td>' + d.name + '</td><td class="num">' + thr[d.id].toFixed(2) + '</td><td class="num">' + Math.max.apply(null, t.loo).toFixed(2) + '</td><td class="num">' + (lam == null ? '—' : lam.toFixed(2)) + '</td></tr>';
-      }).join('') + '</tbody></table>';
-  }
-  $('samples').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-del]'); if (!b) return;
-    state.samples.splice(+b.dataset.del, 1);
-    state.trained = null; state.history = [];
-    setStep('enroll'); save(); render(); drawRhythm();
-  });
-  $('frr').addEventListener('input', function (e) { state.frr = +e.target.value / 100; save(); render(); });
-
-  function profileJSON() {
-    var thr = thresholds();
-    return JSON.stringify({
-      app: 'KeyPrint', version: 3, device: state.device, passphrase: KP.PASSPHRASE, units: state.device === 'mobile' ? 'seconds; tap offsets in key widths/heights from centre' : 'seconds',
-      featureOrder: state.device === 'mobile' ? 'CMU timing (31) then X/Y tap offset per key (22)' : 'CMU',
-      features: names(), frr: state.frr, samples: state.samples,
-      thresholds: state.trained ? thr : null,
-      looScores: state.trained ? Object.fromEntries(KP.DETECTORS.map(function (d) { return [d.id, state.trained[d.id].loo]; })) : null,
-      exported: new Date().toISOString()
-    }, null, 1);
-  }
-  /** Profiles without a device field are desktop (M2–M4 exports, M1 data). A Collect file loads its first 10 reps. */
+  /** Profiles without a device field are desktop (M2–M4 exports, M1 data). */
   function loadProfile(obj) {
-    if (obj && obj.kind === 'keyprint-collect' && Array.isArray(obj.reps)) obj = { app: 'KeyPrint', device: obj.device, passphrase: obj.passphrase, samples: obj.reps.slice(0, N_ENROLL) };
     obj = KPC.fromM1(obj, N_ENROLL, state.frr);
     if (!obj || obj.app !== 'KeyPrint' || !Array.isArray(obj.samples)) throw new Error('Not a KeyPrint profile');
     if (obj.passphrase && obj.passphrase !== KP.PASSPHRASE) throw new Error('Profile is for a different passphrase');
-    var dev = obj.device || 'desktop';
-    if (dev !== state.device) throw new Error('This is a ' + (dev === 'mobile' ? 'phone (keypad)' : 'keyboard') + ' profile; turn the on-screen keypad ' + (dev === 'mobile' ? 'on' : 'off') + ' first. Profiles are never compared across devices');
+    if ((obj.device || 'desktop') !== state.device) throw new Error('Profile is for the other device type');
     var ok = obj.samples.every(function (x) { return Array.isArray(x) && x.length === dim() && x.every(function (v) { return typeof v === 'number' && isFinite(v); }); });
     if (!ok) throw new Error('Each sample must be ' + dim() + ' numbers');
     state.samples = obj.samples.slice(0, N_ENROLL);
     state.frr = typeof obj.frr === 'number' ? Math.min(0.3, Math.max(0, obj.frr)) : 0.05;
-    state.history = [];
     if (state.samples.length === N_ENROLL) { train(); setStep('verify'); } else { state.trained = null; setStep('enroll'); }
   }
-  function prStatus(msg, kind) { var s = $('pr-status'); s.textContent = msg; s.className = 'status' + (kind ? ' ' + kind : ''); }
 
-  /** Save a file through the host's downloads capability, a plain download outside the host, or fail (caller shows the JSON). */
-  async function saveFile(name, json) {
-    var dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
-    if (dl) { await dl.save({ filename: name, data: json }); return 'saved'; }
-    if (!window.claude) {
-      var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' })); a.download = name; a.click();
-      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000); return 'downloaded';
-    }
-    throw { code: 'unavailable' };
+  // ---------- reset (Try it and How it works): tap once to arm, again to confirm ----------
+  function clearProfile() {
+    state.samples = []; state.trained = null; state.frr = 0.05; state.lastX = null;
+    setStep('enroll'); save(); render();
+    setStatus('Reset done. Step 1: type the passphrase 10 times.', 'ok');
   }
-  $('export').addEventListener('click', async function () {
-    var json = profileJSON();
-    try { var how = await saveFile(state.device === 'mobile' ? 'keyprint-profile-mobile.json' : 'keyprint-profile.json', json); prStatus('Profile ' + how + '.', 'ok'); }
-    catch (err) {
-      $('json-box').value = json; $('json-box').closest('details').open = true;
-      prStatus(err && err.code === 'declined' ? 'Save cancelled. The JSON is in the box below.' : 'Saving files is unavailable here. The JSON is in the box below; copy it.', 'bad');
-    }
-  });
-  function copyText(json, box, ok, fail) {
-    var p = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(json) : Promise.reject();
-    p.then(ok, function () { box.hidden = false; var d = box.closest('details'); if (d) d.open = true; box.value = json; box.select(); fail(); });
+  function resetButton(b, after) {
+    var label = b.textContent, timer = null;
+    b.addEventListener('click', function () {
+      if (!b.classList.contains('armed')) {
+        b.classList.add('armed'); b.textContent = 'Tap again to reset';
+        timer = setTimeout(function () { b.classList.remove('armed'); b.textContent = label; }, 3000); return;
+      }
+      clearTimeout(timer); b.classList.remove('armed'); b.textContent = label;
+      clearProfile(); if (after) after();
+    });
   }
-  $('copy').addEventListener('click', function () {
-    var json = profileJSON(), box = $('json-box'); box.value = json;
-    copyText(json, box, function () { prStatus('Profile JSON copied.', 'ok'); }, function () { prStatus('Copy blocked. The JSON is selected in the box below.', 'bad'); });
-  });
-  function importText(text) {
-    try {
-      var obj = JSON.parse(text), n1 = obj && Array.isArray(obj.attempts) ? obj.attempts.length : 0;
-      loadProfile(obj); save(); render(); drawRhythm();
-      prStatus('Imported ' + state.samples.length + ' samples' + (n1 ? ' (latest of ' + n1 + ' M1 attempts)' : '') + (state.trained ? ' and retrained.' : '.'), 'ok');
-    }
-    catch (err) { prStatus('Import failed: ' + (err.message || err), 'bad'); }
-  }
-  $('import-btn').addEventListener('click', function () { $('import-file').click(); });
-  $('import-file').addEventListener('change', function (e) {
-    var f = e.target.files[0]; if (!f) return;
-    var r = new FileReader(); r.onload = function () { importText(r.result); }; r.readAsText(f); e.target.value = '';
-  });
-  $('import-text').addEventListener('click', function () { importText($('json-box').value); });
-  $('load-example').addEventListener('click', function () {
-    var seed = Date.now() % 100000;
-    var S = state.device === 'mobile' ? KPT.syntheticVolunteers({ seed: seed, users: 1, reps: N_ENROLL })[0].reps : KP.syntheticProfileSamples(seed, N_ENROLL);
-    loadProfile({ app: 'KeyPrint', device: state.device, samples: S, frr: state.frr });
-    save(); render(); drawRhythm(); prStatus('Loaded a synthetic ' + (state.device === 'mobile' ? 'phone ' : '') + 'typist. Your real typing will almost certainly be rejected by it.', 'ok');
-  });
-  var resetTimer = null;
-  $('reset').addEventListener('click', function () {
-    var b = $('reset');
-    if (!b.classList.contains('armed')) {
-      b.classList.add('armed'); b.textContent = 'Confirm reset';
-      resetTimer = setTimeout(function () { b.classList.remove('armed'); b.textContent = 'Reset'; }, 3000); return;
-    }
-    clearTimeout(resetTimer); b.classList.remove('armed'); b.textContent = 'Reset';
-    state.samples = []; state.trained = null; state.history = []; state.frr = 0.05; state.lastX = null; state.lastKs = null;
-    setStep('enroll'); save(); render(); drawTimelineEmpty(); drawRhythm(); prStatus('Profile cleared.', 'ok');
-  });
+  resetButton($('reset'), function () { tryCap.focus(); });
+  resetButton($('how-reset'), function () { $('tab-try').click(); window.scrollTo(0, 0); tryCap.focus(); });
 
   // ---------- guided steps: 1 Enroll → 2 Verify ----------
   var HEADINGS = {
@@ -1409,17 +1053,6 @@ if (typeof module !== 'undefined') module.exports = KPT;
   $('step-enroll').addEventListener('click', function () { setStep('enroll', true); });
   $('step-verify').addEventListener('click', function () { setStep('verify', true); });
 
-  // ---------- self-test ----------
-  function runTest() {
-    var seed = 1 + Math.floor(Math.random() * 1e6), out = KP.runSyntheticTests({ seed: seed });
-    $('test-out').innerHTML = '<table><thead><tr><th>Detector</th><th class="num">Genuine</th><th class="num">Impostor</th><th class="num">FRR</th><th class="num">Caught</th><th></th></tr></thead><tbody>' +
-      out.results.map(function (r) {
-        return '<tr><td>' + r.name + '</td><td class="num">' + r.meanGen.toFixed(2) + '</td><td class="num">' + r.meanImp.toFixed(2) + '</td><td class="num">' +
-          (r.heldOutFRR * 100).toFixed(0) + '%</td><td class="num">' + (r.impostorReject * 100).toFixed(0) + '%</td><td class="' + (r.pass ? 'test-pass' : 'test-fail') + '">' + (r.pass ? 'PASS' : 'FAIL') + '</td></tr>';
-      }).join('') + '</tbody></table><p class="hint mono">seed ' + seed + ' · mean scores; FRR on held-out genuine at the 5% LOO threshold</p>';
-  }
-  $('run-test').addEventListener('click', runTest);
-
   // ---------- persistence (this browser only; one slot per device type) ----------
   function save() { try { localStorage.setItem(STORE[state.device], JSON.stringify({ app: 'KeyPrint', device: state.device, samples: state.samples, frr: state.frr })); } catch (e) { } }
   function restore() {
@@ -1433,47 +1066,28 @@ if (typeof module !== 'undefined') module.exports = KPT;
   function useDevice(dev) {
     if (dev === state.device) return;
     save();
-    state = { device: dev, step: 'enroll', samples: [], frr: 0.05, trained: null, history: [], lastX: null, lastKs: null };
-    restore(); render(); drawTimelineEmpty(); drawRhythm(); renderDevsEmpty();
+    state = { device: dev, step: 'enroll', samples: [], frr: 0.05, trained: null, lastX: null };
+    restore(); render();
   }
-  function renderDevsEmpty() { $('devs').innerHTML = '<div class="empty">Shown after each verify attempt: features ranked by |x − mean| / mean absolute deviation.</div>'; }
 
-  // ---------- keypad switch ----------
-  function paintMode() {
-    var testing = keypadOn && !isTouch();
-    $('force-keypad').checked = keypadOn;
-    $('mode-badge').textContent = keypadOn ? 'Phone profile · keypad' + (testing ? ' (forced)' : '') : 'Desktop profile · keyboard';
-    $('mode-badge').className = 'badge' + (testing ? ' warn' : '');
-    $('mode-sub').textContent = isTouch() ? 'Phone profile, separate from keyboard' : 'Force on to test the phone keypad here';
-    $('mode-note').hidden = !testing;
-  }
-  function setKeypad(on, why) {
-    if (why === 'user') { try { localStorage.setItem(KEYPAD_PREF, on ? '1' : '0'); } catch (e) { } }
+  // ---------- keyboard vs keypad: the keypad turns on by itself on a touch screen ----------
+  function setKeypad(on) {
     var changed = on !== keypadOn;
     keypadOn = on;
     if (changed) {
       useDevice(on ? 'mobile' : 'desktop');
       if (document.activeElement && document.activeElement.blur && on && document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'password') document.activeElement.blur();
     }
-    tryCap.mode(); paintMode();
+    tryCap.mode();
     setStatus(keypadOn ? 'Tap the keys: “.” first, Return last. A wrong key discards the attempt.' : 'Start with “.”. Backspace or a wrong key discards the attempt; Esc restarts.');
   }
-  $('force-keypad').addEventListener('change', function (e) { setKeypad(e.target.checked, 'user'); });
 
-  function render() { renderProfile(); renderVerdicts(); renderTally(); paintSteps(); }
-
-  // ---------- size-dependent SVG charts: redraw when their box width changes ----------
-  var pending = 0;
-  function redraw() { pending = 0; if ($('view-how').hidden) return; if (state.lastKs) drawTimeline(state.lastKs); drawRhythm(); }
-  document.addEventListener('kp:tab', function (e) { if (e.detail === 'how') redraw(); });
-  if (window.ResizeObserver) {
-    var widths = new WeakMap();
-    var ro = new ResizeObserver(function (entries) {
-      var changed = entries.some(function (en) { var w = Math.round(en.contentRect.width); if (widths.get(en.target) === w) return false; widths.set(en.target, w); return true; });
-      if (changed && !pending) pending = requestAnimationFrame(redraw);
-    });
-    [$('timeline').parentNode, $('rhythm').parentNode].forEach(function (el) { ro.observe(el); });
-  } else window.addEventListener('resize', function () { if (!pending) pending = requestAnimationFrame(redraw); });
+  function render() {
+    var n = state.samples.length;
+    $('step-enroll-sub').textContent = n + '/' + N_ENROLL;
+    $('step-enroll').classList.toggle('done', n >= N_ENROLL);
+    paintSteps();
+  }
 
   // read-only hooks for the Playwright tests and the console
   window.KeyPrint = {
@@ -1482,11 +1096,10 @@ if (typeof module !== 'undefined') module.exports = KPT;
     featureNames: function () { return names().slice(); }
   };
 
-  var pref = null; try { pref = localStorage.getItem(KEYPAD_PREF); } catch (e) { }
-  keypadOn = pref == null ? coarse : pref === '1';
+  keypadOn = coarse;
   state.device = keypadOn ? 'mobile' : 'desktop';
-  restore(); render(); drawTimelineEmpty(); drawRhythm(); runTest();
-  tryCap.mode(); paintMode();
+  restore(); render();
+  tryCap.mode();
   if (keypadOn) setStatus('Tap the keys: “.” first, Return last. A wrong key discards the attempt.');
 })();
 </script>
@@ -1756,15 +1369,6 @@ if (typeof module !== 'undefined') module.exports = KPB;
       (e.frr5[r.sizes.indexOf(10)] * 100).toFixed(0) + '% false rejects on held-out reps: a quantile of 10 scores is noisy and runs low, and 10 reps from one sitting miss the drift between sessions.';
   }
 
-  function renderHowSize() {
-    var r = PRE, want = [5, 10, 20, 50, 100, 200];
-    $('how-size').innerHTML = '<table><thead><tr><th class="num">Reps</th>' + IDS.map(function (id) { return '<th class="num">' + r.det[id].name.split(' ')[0] + '</th>'; }).join('') + '</tr></thead><tbody>' +
-      want.map(function (n) {
-        var i = r.sizes.indexOf(n); if (i < 0) return '';
-        return '<tr' + (n === 10 ? ' style="font-weight:700"' : '') + '><td class="num">' + n + (n === 10 ? ' (this demo)' : '') + '</td>' + IDS.map(function (id) { return '<td class="num">' + f3(r.det[id].enroll.mean[i]) + '</td>'; }).join('') + '</tr>';
-      }).join('') + '</tbody></table>';
-  }
-
   // ---------- ROC ----------
   function drawRoc() {
     var C = colors(), s = setup($('c-roc')), g = s.g, r = ui.res, grid = r.meta.faGrid;
@@ -1939,7 +1543,7 @@ if (typeof module !== 'undefined') module.exports = KPB;
   drop.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!busy) $('b-file').click(); } });
   $('b-revert').addEventListener('click', function () { ui.res = PRE; ui.live = false; ui.subject = -1; $('b-revert').hidden = true; renderTable(); drawAll(); bstatus('Showing precomputed results.'); });
 
-  renderTable(); renderHowSize();
+  renderTable();
   var t0 = 'try'; try { t0 = localStorage.getItem('keyprint.tab') || 'try'; } catch (e) { }
   var h = (location.hash || '').slice(1); if (TABS.indexOf(h) >= 0) t0 = h;
   showTab(t0 === 'live' ? 'try' : t0);
