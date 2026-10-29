@@ -2,7 +2,7 @@
 // Phone (375×667, touch, DPR 2): create a password, real touch input via CDP on the full on-screen keyboard (Shift, 123),
 // keypad attempt -> 31 + 22 features, multi-touch, Backspace, enroll + verify, canvas DPR + resize, touch targets, no overflow.
 // Desktop (1440×900): password rules and inline errors, keyboard attempt -> 31 features, wrong password not counted,
-// rhythm reject -> security question -> retrain, Reset on the Enroll step only, no shared passphrase anywhere, How it works, Detectors tab.
+// "Is it really you?" always on Verify -> security question -> retrain, Reset on the Enroll step only, no shared passphrase anywhere, How it works, Detectors tab.
 // Writes docs/screenshots/*.png.
 'use strict';
 const path = require('path');
@@ -170,6 +170,7 @@ async function typeKeys(page, keys) {
   check('10 keypad samples -> trained phone profile', await page.evaluate(() => KeyPrint.trained() && KeyPrint.samples() === 10));
   await tapAttempt(page, t, '#keypad', { id0: 50000, off: () => [0, 0.1] }); await waitIdle(page);
   check('verify attempt gives a verdict', /Accepted|Rejected/.test(await page.textContent('#status')));
+  check('"Is it really you?" shown after a reject, hidden after an accept', (await page.isVisible('#recover-open')) === /Rejected/.test(await page.textContent('#status')));
   await page.screenshot({ path: path.join(SHOTS, 'mobile-375.png') });
   await page.screenshot({ path: path.join(SHOTS, 'mobile-375-full.png'), fullPage: true });
   const prof = await page.evaluate(() => JSON.parse(localStorage.getItem('keyprint.profile.mobile.v2')));
@@ -238,16 +239,20 @@ async function typeKeys(page, keys) {
   await page.reload(); await sleep(150);
   check('desktop profile trained (synthetic example)', await page.evaluate(() => KeyPrint.trained() && KeyPrint.device() === 'desktop'));
   check('Verify step open once trained', await page.evaluate(() => !document.getElementById('step-verify').disabled));
-  check('Verify hides Reset', (await tryParts()) === 'capture,status' && !(await page.isVisible('#reset')), await tryParts());
+  check('Verify hides Reset, shows "Is it really you?"', (await tryParts()) === 'capture,status,recover-row' && !(await page.isVisible('#reset')), await tryParts());
+  check('"Is it really you?" is on Verify before any try', (await page.textContent('#recover-open')) === 'Is it really you?' && await page.isVisible('#recover-open'));
+  await page.click('#step-enroll'); await sleep(60);
+  check('"Is it really you?" is not on Enroll', !(await page.isVisible('#recover-open')));
+  await page.click('#step-verify'); await sleep(60);
   await page.screenshot({ path: path.join(SHOTS, 'desktop-1440.png') });
 
-  // wrong password on Verify: rejected, no security question
+  // wrong password on Verify: rejected, "Is it really you?" stays
   await page.click('#pass'); await typeKeys(page, 'Tr0ub4dor?'.split('').concat('Enter'));
-  check('Verify, wrong password: rejected without the security question', /Rejected: that is not the password/.test(await page.textContent('#status')) && !(await page.isVisible('#recover-open')));
-  // right password, but this robot is not the synthetic typist: rejected on rhythm -> security question
+  check('Verify, wrong password: rejected, "Is it really you?" still offered', /Rejected: that is not the password/.test(await page.textContent('#status')) && await page.isVisible('#recover-open'));
+  // right password, but this robot is not the synthetic typist: rejected on rhythm -> "Is it really you?" -> security question
   await typeKeys(page, PASS);
   check('Verify, right password, other rhythm: rejected on rhythm', /Rejected: right password/.test(await page.textContent('#status')), await page.textContent('#status'));
-  check('offers the security question', await page.isVisible('#recover-open'));
+  check('"Is it really you?" still offered after a rhythm reject', await page.isVisible('#recover-open'));
   await page.click('#recover-open');
   check('shows your own question', (await page.textContent('#recover-q')) === Q && await page.evaluate(() => document.activeElement.id === 'recover-a'));
   await page.fill('#recover-a', 'red comet'); await page.click('#recover-check');
@@ -255,7 +260,7 @@ async function typeKeys(page, keys) {
   check('wrong answer refused', /not right/.test(await page.textContent('#recover-msg')) && !(await page.isVisible('#retrain')));
   await page.fill('#recover-a', '  blue   COMET '); await page.click('#recover-check');
   await page.waitForSelector('#retrain', { state: 'visible' });
-  check('right answer (any case, extra spaces) lets you in and offers retraining', /Correct answer: you are in/.test(await page.textContent('#status')) && !(await page.isVisible('#recover')));
+  check('right answer (any case, extra spaces) lets you in and offers retraining', /Correct answer: you are in/.test(await page.textContent('#status')) && !(await page.isVisible('#recover')) && !(await page.isVisible('#recover-open')));
   await page.screenshot({ path: path.join(SHOTS, 'desktop-1440-recover.png') });
   await page.click('#retrain');
   check('Retrain clears the rhythm but keeps the password', await page.evaluate(() => KeyPrint.samples() === 0 && !KeyPrint.trained() && KeyPrint.hasAccount() &&
@@ -281,6 +286,7 @@ async function typeKeys(page, keys) {
   // How it works: plain walkthrough only, no Reset
   await page.click('#tab-how'); await sleep(120);
   check('How it works is a 7-step walkthrough', (await page.$$('#view-how .walk > li')).length === 7);
+  check('How it works explains "Is it really you?"', /Is it really you\?/.test(await page.textContent('#view-how .walk')));
   check('old session panels are gone', await page.evaluate(() => ['timeline', 'rhythm', 'overall', 'verdicts', 'devs', 'tally', 'force-keypad', 'thr-table', 'test-out', 'export'].every((id) => !document.getElementById(id))));
   await page.screenshot({ path: path.join(SHOTS, 'desktop-1440-how.png'), fullPage: true });
   await page.click('#view-how a[data-goto="detectors"]'); await sleep(120);

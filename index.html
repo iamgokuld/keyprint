@@ -188,6 +188,8 @@ h2{font-size:12px;letter-spacing:.14em}
 .try .status.ok{color:var(--ok)} .try .status.bad{color:var(--bad)}
 /* Try it: reset (Enroll only) and the security-question backup sit under the message */
 .stage-foot{display:flex;justify-content:center}
+.btn.quiet{border-color:transparent;background:none;color:var(--accent);text-decoration:underline;text-underline-offset:3px;min-height:36px}
+.btn.quiet:hover{border-color:transparent;text-decoration-thickness:2px}
 .capture{display:grid;gap:20px}
 /* set up: own password + security question */
 .setup{display:grid;gap:18px}
@@ -327,7 +329,7 @@ h2{font-size:12px;letter-spacing:.14em}
       <div class="keypad" id="keypad" role="group" aria-label="On-screen keyboard" hidden></div>
     </div>
     <div class="status" id="status" aria-live="polite">First, create your own password and a security question.</div>
-    <div class="stage-foot" id="recover-row" hidden><button class="btn" id="recover-open" type="button">It is me: answer my security question</button></div>
+    <div class="stage-foot" id="recover-row" hidden><button class="btn quiet" id="recover-open" type="button" aria-label="Is it really you? Answer your security question">Is it really you?</button></div>
     <form class="recover" id="recover" hidden>
       <p class="recover-q" id="recover-q"></p>
       <label for="recover-a" class="sr-only">Your answer</label>
@@ -490,7 +492,7 @@ h2{font-size:12px;letter-spacing:.14em}
       </li>
       <li>
         <h3>Rejected but it really is you? Answer your question</h3>
-        <p>Your own rhythm can drift. When the right password is rejected on rhythm, the page offers your security question. Answer it correctly and you are let in, and the page offers to retrain on how you type now. Reset on the Enroll step wipes everything so you can start over with a new password.</p>
+        <p>Your own rhythm can drift. Under the password box on the Verify step there is an <strong>Is it really you?</strong> link, before you type and after any rejection. Tap it, answer your security question correctly, and you are let in, and the page offers to retrain on how you type now. Reset on the Enroll step wipes everything so you can start over with a new password.</p>
       </li>
     </ol>
 
@@ -1175,7 +1177,7 @@ if (typeof module !== 'undefined') module.exports = KPT;
   var tryCap = Capturer({
     input: $('pass'), keypad: $('keypad'), status: setStatus,
     blocked: function () { return checking ? 'One moment, checking the last try…' : null; },
-    onStart: function () { setStatus('Recording…'); showRecover(false); },
+    onStart: function () { setStatus('Recording…'); paintRecover(); },
     onComplete: function (r, device) { finishAttempt(r, device); }
   });
 
@@ -1211,20 +1213,20 @@ if (typeof module !== 'undefined') module.exports = KPT;
   }
   function train() { state.trained = state.samples.length >= 3 ? KP.trainAll(state.samples) : null; }
 
-  // ---------- verify: 2 of 3 detectors must accept; a rhythm reject offers the security question ----------
+  // ---------- verify: 2 of 3 detectors must accept; "Is it really you?" (the security question) is offered until a try is accepted ----------
   function onVerify(x) {
     if (!state.trained) { setStatus('Train a profile first.', 'bad'); return; }
     var accepts = KP.DETECTORS.filter(function (d) {
       return d.score(state.trained[d.id].model, x) <= KP.thresholdAt(state.trained[d.id].loo, state.frr);
     }).length, ok = accepts >= 2;
     setStatus(ok ? 'Accepted: ' + accepts + ' of 3 detectors say it is you.' : 'Rejected: right password, but only ' + accepts + ' of 3 detectors say it is you.', ok ? 'ok' : 'bad');
-    showRecover(!ok);
+    if (ok) $('recover-row').hidden = true;
   }
 
-  // ---------- security question (backup after a rhythm reject) ----------
-  function showRecover(on) {
-    $('recover-row').hidden = !on;
-    if (!on) { $('recover').hidden = true; $('retrain-row').hidden = true; }
+  // ---------- security question: the "Is it really you?" backup on the Verify step ----------
+  function paintRecover() {
+    $('recover-row').hidden = !(account && state.trained && state.step === 'verify');
+    $('recover').hidden = true; $('retrain-row').hidden = true;
   }
   $('recover-open').addEventListener('click', function () {
     $('recover-row').hidden = true; $('recover').hidden = false;
@@ -1245,7 +1247,7 @@ if (typeof module !== 'undefined') module.exports = KPT;
     }, function () { $('recover-check').disabled = false; $('recover-msg').textContent = 'This browser could not check the answer.'; });
   });
   $('retrain').addEventListener('click', function () {
-    showRecover(false); clearSamples();
+    clearSamples();
     setStatus('Retraining. Step 1: type your password 10 times.', 'ok'); tryCap.focus();
   });
 
@@ -1271,7 +1273,7 @@ if (typeof module !== 'undefined') module.exports = KPT;
     try { localStorage.removeItem(ACCOUNT); localStorage.removeItem(STORE.desktop); localStorage.removeItem(STORE.mobile); } catch (e) { }
     account = null;
     state.samples = []; state.trained = null; state.frr = 0.05; state.lastX = null;
-    showRecover(false); setStep('enroll'); render();
+    setStep('enroll'); render();
     setStatus('Reset done. Create a new password to start again.', 'ok');
   }
   function resetButton(b, after) {
@@ -1352,11 +1354,10 @@ if (typeof module !== 'undefined') module.exports = KPT;
     });
     $('cap-h').textContent = setup ? 'Create your password' : HEADINGS[state.step];
     $('reset-row').hidden = setup || state.step !== 'enroll';
-    if (setup) showRecover(false);
+    paintRecover();
   }
   function setStep(s, focus) {
     if (s !== 'enroll' && !state.trained) s = 'enroll';
-    if (s !== state.step) showRecover(false);
     state.step = s; tryCap.reset();
     paintSteps();
     if (focus) tryCap.focus();
