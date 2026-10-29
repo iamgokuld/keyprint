@@ -203,8 +203,10 @@ h2{font-size:12px;letter-spacing:.14em}
 #pass::placeholder{font-family:var(--font-body);font-size:15px;letter-spacing:.01em;color:var(--muted)}
 .try .status{font-family:var(--font-display);font-size:19px;line-height:1.45;text-align:center;color:var(--ink);min-height:2.9em;text-wrap:balance}
 .try .status.ok{color:var(--ok)} .try .status.bad{color:var(--bad)}
-/* Try it: reset sits under the message */
+/* Try it: reset (Enroll only) sits under the message, the passphrase at the very bottom */
 .stage-foot{display:flex;justify-content:center}
+.phrase{margin:0;padding-top:16px;border-top:1px solid var(--line);text-align:center;color:var(--muted)}
+.phrase .mono{color:var(--ink);font-size:20px;letter-spacing:.04em;margin-left:6px}
 /* How it works: one plain walkthrough, numbered steps down a line */
 .how{max-width:720px;width:100%;margin:0 auto;display:grid;gap:28px}
 .how h3{margin:0;font-family:var(--font-display);font-size:22px;font-weight:600;letter-spacing:-.015em;line-height:1.25;text-wrap:balance;font-variation-settings:"opsz" 72}
@@ -220,9 +222,6 @@ h2{font-size:12px;letter-spacing:.14em}
 .walk>li:last-child::after{display:none}
 .walk ul{margin:0;padding-left:20px;display:grid;gap:4px}
 .how-notes{display:grid;gap:12px;padding:18px 20px;border-radius:14px;background:var(--accent-soft)}
-.how-reset{display:flex;flex-wrap:wrap;gap:14px 20px;align-items:center;justify-content:space-between;padding:20px 22px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
-.how-reset>div{display:grid;gap:4px;flex:1 1 260px}
-.how-reset p{color:var(--muted)}
 @media (max-width:520px){.walk>li{padding-left:52px}.walk>li::before{width:36px;height:36px;font-size:17px}.walk>li::after{left:17px;top:38px}}
 @media (max-width:640px){.panel{padding:16px}.try .steps{grid-template-columns:repeat(2,minmax(0,1fr))}.try .steps button small{display:block}#pass{font-size:20px}}
 </style>
@@ -254,10 +253,11 @@ h2{font-size:12px;letter-spacing:.14em}
     </ol>
     <div class="keys" id="keys" aria-hidden="true" hidden></div>
     <label for="pass" class="sr-only">Passphrase (type .tie5Roanl then Return)</label>
-    <input id="pass" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="status" placeholder="type .tie5Roanl, then Return">
+    <input id="pass" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="status" placeholder="type the passphrase below, then Return">
     <div class="keypad" id="keypad" role="group" aria-label="On-screen keypad for .tie5Roanl and Return" hidden></div>
     <div class="status" id="status" aria-live="polite">Start with “.”. Backspace or a wrong key discards the attempt; Esc restarts.</div>
-    <div class="stage-foot"><button class="btn danger" id="reset">Reset</button></div>
+    <div class="stage-foot" id="reset-row"><button class="btn danger" id="reset">Reset</button></div>
+    <p class="phrase" id="phrase">Passphrase<span class="mono">.tie5Roanl</span></p>
   </section>
   </div><!-- /view-try -->
 
@@ -380,14 +380,6 @@ h2{font-size:12px;letter-spacing:.14em}
     <div class="how-notes">
       <p><strong>It is not perfect.</strong> Your own rhythm changes when you are tired, rushed or on a different keyboard, so sometimes it will reject you too. Treat it as a demo of the idea, used alongside a password, never instead of one.</p>
       <p><strong>Your data stays here.</strong> Every timing and your profile are kept in this browser only. Nothing is sent anywhere.</p>
-    </div>
-
-    <div class="how-reset">
-      <div>
-        <h3>Start over</h3>
-        <p>Reset deletes your 10 enrollment tries so you can enroll again from scratch.</p>
-      </div>
-      <button class="btn danger" id="how-reset">Reset and start over</button>
     </div>
   </div>
 
@@ -1011,7 +1003,7 @@ if (typeof module !== 'undefined') module.exports = KPT;
     if (state.samples.length === N_ENROLL) { train(); setStep('verify'); } else { state.trained = null; setStep('enroll'); }
   }
 
-  // ---------- reset (Try it and How it works): tap once to arm, again to confirm ----------
+  // ---------- reset (Try it, Enroll step only): tap once to arm, again to confirm ----------
   function clearProfile() {
     state.samples = []; state.trained = null; state.frr = 0.05; state.lastX = null;
     setStep('enroll'); save(); render();
@@ -1029,7 +1021,6 @@ if (typeof module !== 'undefined') module.exports = KPT;
     });
   }
   resetButton($('reset'), function () { tryCap.focus(); });
-  resetButton($('how-reset'), function () { $('tab-try').click(); window.scrollTo(0, 0); tryCap.focus(); });
 
   // ---------- guided steps: 1 Enroll → 2 Verify ----------
   var HEADINGS = {
@@ -1043,6 +1034,7 @@ if (typeof module !== 'undefined') module.exports = KPT;
       if (k !== 'enroll') b.disabled = !state.trained;
     });
     $('cap-h').textContent = HEADINGS[state.step];
+    $('reset-row').hidden = state.step !== 'enroll';
   }
   function setStep(s, focus) {
     if (s !== 'enroll' && !state.trained) s = 'enroll';
