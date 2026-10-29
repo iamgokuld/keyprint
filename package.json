@@ -5,7 +5,7 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "test": "node test_detectors.js && node test_capture.js && node test_touch.js",
+    "test": "node test_detectors.js && node test_capture.js && node test_secret.js && node test_touch.js",
     "e2e": "node test_e2e.js",
     "bench": "node bench.js DSL-StrongPasswordData.csv",
     "bench:mobile": "node bench-mobile.js data/collect",

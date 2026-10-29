@@ -1,7 +1,8 @@
 // node test_e2e.js — browser tests with Playwright + Chromium (not part of `npm test`; needs `npm i -D playwright`).
-// Phone (375×667, touch, DPR 2): real touch input via CDP, keypad attempt -> 31 + 22 features, multi-touch, wrong key,
-// enroll + verify, Detectors tab, touch targets, no horizontal overflow.
-// Desktop (1440×900): keyboard attempt -> 31 features, Reset on the Enroll step only, passphrase at the bottom, plain How it works walkthrough.
+// Phone (375×667, touch, DPR 2): create a password, real touch input via CDP on the full on-screen keyboard (Shift, 123),
+// keypad attempt -> 31 + 22 features, multi-touch, Backspace, enroll + verify, canvas DPR + resize, touch targets, no overflow.
+// Desktop (1440×900): password rules and inline errors, keyboard attempt -> 31 features, wrong password not counted,
+// rhythm reject -> security question -> retrain, Reset on the Enroll step only, no shared passphrase anywhere, How it works, Detectors tab.
 // Writes docs/screenshots/*.png.
 'use strict';
 const path = require('path');
@@ -13,7 +14,8 @@ try { ({ chromium } = require('playwright')); } catch (e) { ({ chromium } = requ
 const URL = 'file://' + path.join(__dirname, 'index.html');
 const SHOTS = path.join(__dirname, 'docs', 'screenshots');
 fs.mkdirSync(SHOTS, { recursive: true });
-const PASS = ['.', 't', 'i', 'e', '5', 'R', 'o', 'a', 'n', 'l', 'Enter'];
+const PW = 'Tr0ub4dor!', Q = 'What was my first bike called?', A = 'Blue Comet';
+const PASS = PW.split('').concat('Enter');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function open(browser, ctxOpts) {
@@ -55,38 +57,65 @@ function toucher(cdp) {
     async up(id) { active.delete(id); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: pts() }); }
   };
 }
+/** Boxes of the keys showing now (one keyboard layer at a time), plus the layer keys. */
 async function keyBoxes(page, sel) {
-  return page.evaluate((sel) => (document.querySelector(sel).scrollIntoView({ block: 'center' }), Object.fromEntries([...document.querySelectorAll(sel + ' [data-k]')].map((b) => {
-    const r = b.getBoundingClientRect(); return [b.dataset.k, { x: r.left, y: r.top, w: r.width, h: r.height }];
+  return page.evaluate((sel) => (document.querySelector(sel).scrollIntoView({ block: 'center' }), Object.fromEntries([...document.querySelectorAll(sel + ' .kp-layer:not([hidden]) [data-k],' + sel + ' .kp-layer:not([hidden]) [data-ctl]')].map((b) => {
+    const r = b.getBoundingClientRect(); return [b.dataset.k || 'ctl:' + b.dataset.ctl, { x: r.left, y: r.top, w: r.width, h: r.height }];
   }))), sel);
+}
+/** Tap layer keys (Shift, 123, abc) until key k is showing; they are not part of the attempt. */
+async function reach(page, t, sel, k, idRef) {
+  for (let n = 0; n < 3; n++) {
+    const boxes = await keyBoxes(page, sel);
+    if (boxes[k]) return boxes;
+    const ctl = /[A-Z]/.test(k) && boxes['ctl:Shift'] ? 'ctl:Shift' : /[a-z]/.test(k) && boxes['ctl:abc'] ? 'ctl:abc'
+      : boxes['ctl:123'] ? 'ctl:123' : boxes['ctl:abc'] ? 'ctl:abc' : 'ctl:Shift';
+    const b = boxes[ctl], id = idRef.id++;
+    await t.down(id, b.x + b.w / 2, b.y + b.h / 2); await sleep(30); await t.up(id); await sleep(40);
+  }
+  throw new Error('key not on the keyboard: ' + k);
 }
 /** One keypad attempt. off(i) -> [fx, fy] tap offset in key units; overlap(i) -> true: key i+1 lands before key i lifts. */
 async function tapAttempt(page, t, sel, opts) {
   opts = opts || {};
-  const boxes = await keyBoxes(page, sel), keys = opts.keys || PASS;
-  let id = opts.id0 || 1;
+  const keys = opts.keys || PASS, ref = { id: opts.id0 || 1 };
   for (let i = 0; i < keys.length; i++) {
+    const boxes = await reach(page, t, sel, keys[i], ref);
     const b = boxes[keys[i]], [fx, fy] = opts.off ? opts.off(i) : [0, 0.1];
-    const me = id++;
+    const me = ref.id++;
     await t.down(me, b.x + b.w * (0.5 + fx), b.y + b.h * (0.5 + fy));
     const hold = 45 + Math.round(Math.random() * 30), gap = 70 + Math.round(Math.random() * 40);
     if (opts.overlap && opts.overlap(i) && i < keys.length - 1) {
-      // next key lands first, then this one lifts: overlapping taps
-      const n = boxes[keys[i + 1]], nid = id++;
-      await sleep(hold); await t.down(nid, n.x + n.w * 0.5, n.y + n.h * 0.6); await sleep(25); await t.up(me);
+      // next key lands first, then a finger lifts: overlapping taps (measured: Chromium lifts the newer finger here, so wait a full hold
+      // before the first lift to keep both holds realistic)
+      const n = boxes[keys[i + 1]], nid = ref.id++;
+      await sleep(hold); await t.down(nid, n.x + n.w * 0.5, n.y + n.h * 0.6); await sleep(hold); await t.up(me);
       await sleep(hold); await t.up(nid); await sleep(gap); i++;
     } else { await sleep(hold); await t.up(me); await sleep(gap); }
   }
-  return id;
+  return ref.id;
 }
 async function targets(page, scope) {
   return page.evaluate((scope) => {
     const sel = 'button:not(.kp-key):not([disabled]),[role=tab],select,summary,input[type=range],.kp-key';
     return [...document.querySelectorAll(scope + ' ' + sel + ',' + sel.split(',').map((s) => 'header ' + s).join(','))]
       .filter((el) => { const r = el.getBoundingClientRect(); return r.width && r.height && !el.closest('[hidden]'); })
-      .map((el) => { const r = el.getBoundingClientRect(); return { el: (el.id || el.className || el.tagName) + ':' + (el.textContent || '').trim().slice(0, 16), w: r.width, h: r.height }; })
-      .filter((t) => t.w < 44 || t.h < 44);
+      .map((el) => { const r = el.getBoundingClientRect(); return { el: (el.id || el.className || el.tagName) + ':' + (el.textContent || '').trim().slice(0, 16), key: el.classList.contains('kp-key'), w: r.width, h: r.height }; })
+      // a full keyboard puts 10 keys in a row: keyboard keys must be ≥ 44 px tall and ≥ 24 px wide, everything else ≥ 44 × 44
+      .filter((t) => t.key ? t.h < 44 || t.w < 24 : t.w < 44 || t.h < 44);
   }, scope);
+}
+
+async function waitIdle(page) { await page.waitForFunction(() => !KeyPrint.busy()); await sleep(30); }
+async function setUp(page, pw) {
+  await page.fill('#su-pass', pw || PW); await page.fill('#su-confirm', pw || PW);
+  await page.fill('#su-q', Q); await page.fill('#su-a', A);
+  await page.click('#su-create');
+  await page.waitForFunction(() => KeyPrint.hasAccount()); await sleep(50);
+}
+async function typeKeys(page, keys) {
+  for (const k of keys) { await page.keyboard.down(k); await sleep(45 + Math.round(Math.random() * 20)); await page.keyboard.up(k); await sleep(60); }
+  await waitIdle(page);
 }
 
 (async () => {
@@ -97,46 +126,57 @@ async function targets(page, scope) {
   const phone = { viewport: { width: 375, height: 667 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
   let { ctx, page, errors } = await open(browser, phone);
   const cdp = await ctx.newCDPSession(page), t = toucher(cdp);
-  check('keypad shown, text field hidden', await page.isVisible('#keypad') && !(await page.isVisible('#pass')));
+  check('first visit asks for a password, nothing to type into yet', await page.isVisible('#setup') && !(await page.isVisible('#keypad')) && !(await page.isVisible('#step-enroll')));
+  await noOverflowAllTabs(page, '375 setup');
+  await setUp(page);
+  check('after setup: keyboard shown, text field hidden', await page.isVisible('#keypad') && !(await page.isVisible('#pass')) && !(await page.isVisible('#setup')));
   check('phone profile selected', (await page.evaluate(() => KeyPrint.device())) === 'mobile');
   const small = await targets(page, '#view-try');
-  check('touch targets ≥ 44 px (Try it)', small.length === 0, JSON.stringify(small.slice(0, 6)));
-  const keySize = await page.evaluate(() => { const r = document.querySelector('#keypad [data-k="t"]').getBoundingClientRect(); return [r.width, r.height]; });
-  check('keypad keys ≥ 44 × 44', keySize[0] >= 44 && keySize[1] >= 44, keySize.join('×'));
+  check('touch targets (keyboard keys ≥ 44 px tall, ≥ 24 px wide; the rest ≥ 44 × 44)', small.length === 0, JSON.stringify(small.slice(0, 6)));
   check('keypad: touch-action / user-select', await page.evaluate(() => {
     const k = getComputedStyle(document.querySelector('.kp-key')), p = getComputedStyle(document.getElementById('keypad'));
     return p.touchAction === 'manipulation' && k.touchAction === 'none' && k.userSelect === 'none';
   }));
+  check('keyboard does not show the password', await page.evaluate(() => document.querySelectorAll('#keypad [data-k]').length > 90));
   await noOverflowAllTabs(page, '375');
 
-  // wrong key resets + counter
-  await t.down(1, ...(await (async () => { const b = (await keyBoxes(page, '#keypad'))['.']; return [b.x + b.w / 2, b.y + b.h / 2]; })())); await sleep(50); await t.up(1);
-  const bi = (await keyBoxes(page, '#keypad')).i; await t.down(2, bi.x + bi.w / 2, bi.y + bi.h / 2); await sleep(50); await t.up(2);
-  check('wrong key discards and counts', /Wrong key.*\(1 this session\)/.test(await page.textContent('#status')));
+  // Backspace discards + counter
+  const tap = async (k, id) => { const ref = { id: id * 10 }; const b = (await reach(page, t, '#keypad', k, ref))[k]; await t.down(id, b.x + b.w / 2, b.y + b.h / 2); await sleep(50); await t.up(id); await sleep(40); };
+  await tap('T', 1); await tap('Backspace', 2);
+  check('Backspace discards and counts', /Backspace used.*\(1 this session\)/.test(await page.textContent('#status')));
 
-  // a full attempt with known tap offsets and two overlapping pairs
+  // a full attempt with known tap offsets and two overlapping pairs (u→b, d→o), Shift and 123 on the way
   const OFF = (i) => [((i % 5) - 2) * 0.1, i % 2 ? -0.2 : 0.2];
-  await tapAttempt(page, t, '#keypad', { id0: 10, off: OFF, overlap: (i) => i === 1 || i === 6 });
+  await tapAttempt(page, t, '#keypad', { id0: 100, off: OFF, overlap: (i) => i === 3 || i === 6 });
+  await waitIdle(page);
   const x = await page.evaluate(() => KeyPrint.lastVector());
   check('full keypad attempt -> 31 + 22 = 53 features', Array.isArray(x) && x.length === 53 && x.every(Number.isFinite), x && x.length);
+  check('counted as enrollment sample 1', /Sample 1 of 10/.test(await page.textContent('#status')), await page.textContent('#status'));
   const holds = x ? x.filter((v, j) => j < 31 && j % 3 === 0) : [];
   check('hold times plausible (30–300 ms)', holds.length === 11 && holds.every((h) => h > 0.03 && h < 0.3), holds.map((h) => (h * 1000).toFixed(0)).join(' '));
-  check('overlapping taps -> negative UD (t→i, o→a)', x && x[5] < 0 && x[20] < 0, x && [x[5], x[20]].map((v) => v.toFixed(3)).join(', '));
-  const offErr = x ? Math.max(...PASS.map((_, i) => (i === 2 || i === 7) ? 0 : Math.max(Math.abs(x[31 + 2 * i] - OFF(i)[0]), Math.abs(x[32 + 2 * i] - OFF(i)[1])))) : 1;
+  check('overlapping taps -> negative UD (u→b, d→o)', x && x[11] < 0 && x[20] < 0, x && [x[11], x[20]].map((v) => v.toFixed(3)).join(', '));
+  const offErr = x ? Math.max(...PASS.map((_, i) => (i === 4 || i === 7) ? 0 : Math.max(Math.abs(x[31 + 2 * i] - OFF(i)[0]), Math.abs(x[32 + 2 * i] - OFF(i)[1])))) : 1;
   check('tap offsets match where we touched (±0.02 key)', offErr < 0.02, offErr.toFixed(4));
   check('no text field focused (system keyboard never opens)', await page.evaluate(() => !/^(INPUT|TEXTAREA)$/.test(document.activeElement && document.activeElement.tagName)));
-  check('tap dots drawn on the keypad', (await page.$$('#keypad .tap')).length === 11);
+  check('no marks left on the keys after a try (they would show the password)', (await page.$$('#keypad .tap')).length === 0 && await page.isVisible('#keypad [data-k="q"]'));
+
+  // a wrong password is not counted
+  await tapAttempt(page, t, '#keypad', { id0: 900, keys: 'Tr0ub4dor?'.split('').concat('Enter') });
+  await waitIdle(page);
+  check('wrong password not counted', /not the password you created/.test(await page.textContent('#status')) && (await page.evaluate(() => KeyPrint.samples())) === 1);
 
   // enroll 10 + verify
-  for (let k = 1; k < 10; k++) await tapAttempt(page, t, '#keypad', { id0: 100 * k, off: (i) => [0.05 * Math.sin(i + k), 0.1] });
+  for (let k = 1; k < 10; k++) { await tapAttempt(page, t, '#keypad', { id0: 1000 * k, off: (i) => [0.05 * Math.sin(i + k), 0.1] }); await waitIdle(page); }
   check('10 keypad samples -> trained phone profile', await page.evaluate(() => KeyPrint.trained() && KeyPrint.samples() === 10));
-  await tapAttempt(page, t, '#keypad', { id0: 5000, off: () => [0, 0.1] });
+  await tapAttempt(page, t, '#keypad', { id0: 50000, off: () => [0, 0.1] }); await waitIdle(page);
   check('verify attempt gives a verdict', /Accepted|Rejected/.test(await page.textContent('#status')));
   await page.screenshot({ path: path.join(SHOTS, 'mobile-375.png') });
   await page.screenshot({ path: path.join(SHOTS, 'mobile-375-full.png'), fullPage: true });
-  const prof = await page.evaluate(() => { return JSON.parse(localStorage.getItem('keyprint.profile.mobile.v1')); });
-  check('phone profile stored separately with device type', prof && prof.device === 'mobile' && prof.samples[0].length === 53);
-  check('desktop slot untouched', await page.evaluate(() => localStorage.getItem('keyprint.profile.v2') === null || JSON.parse(localStorage.getItem('keyprint.profile.v2')).samples.length === 0));
+  const prof = await page.evaluate(() => JSON.parse(localStorage.getItem('keyprint.profile.mobile.v2')));
+  const acct = await page.evaluate(() => JSON.parse(localStorage.getItem('keyprint.account.v1')));
+  check('phone profile stored with device type and account', prof && prof.device === 'mobile' && prof.samples[0].length === 53 && prof.account === acct.pwSalt);
+  check('account keeps only hashes of the password and answer', acct && acct.question === Q && !JSON.stringify(acct).includes(PW) && !/blue comet/i.test(JSON.stringify(acct)));
+  check('desktop slot untouched', await page.evaluate(() => localStorage.getItem('keyprint.profile.v3') === null));
 
   // Detectors tab: three detectors, two plots, the vote table; no benchmark leftovers
   await page.click('#tab-detectors'); await sleep(200);
@@ -156,48 +196,97 @@ async function targets(page, scope) {
   // ===================== desktop =====================
   console.log('Desktop 1440×900');
   ({ ctx, page, errors } = await open(browser, { viewport: { width: 1440, height: 900 } }));
-  check('keyboard mode by default', await page.isVisible('#pass') && !(await page.isVisible('#keypad')) && (await page.evaluate(() => KeyPrint.device())) === 'desktop');
+  check('no shared passphrase anywhere in Try it or How it works', await page.evaluate(() =>
+    !/tie5Roanl/.test(document.getElementById('view-try').textContent + document.getElementById('view-how').textContent) && !document.getElementById('phrase')));
+  check('first visit shows only the password setup', await page.isVisible('#setup') && !(await page.isVisible('#pass')) && !(await page.isVisible('#reset')));
+  await page.screenshot({ path: path.join(SHOTS, 'desktop-1440-setup.png') });
+  // rules tick as you type
+  const ruleState = () => page.evaluate(() => ['len', 'upper', 'number', 'special'].map((r) => document.getElementById('rule-' + r).className || '-').join(','));
+  await page.fill('#su-pass', 'abc');
+  check('"abc": every rule unmet', (await ruleState()) === 'unmet,unmet,unmet,unmet', await ruleState());
+  await page.fill('#su-pass', 'Abcdefg1');
+  check('"Abcdefg1": only the special character missing', (await ruleState()) === 'met,met,met,unmet', await ruleState());
+  await page.click('#su-create');
+  check('Create with a weak password: error, focus on the password, no account', /Fix the highlighted/.test(await page.textContent('#su-error')) &&
+    (await page.evaluate(() => document.activeElement.id === 'su-pass' && !KeyPrint.hasAccount())));
+  await page.fill('#su-pass', PW); await page.fill('#su-confirm', PW.slice(0, -1) + '?');
+  check('confirm mismatch shown inline', /not the same/.test(await page.textContent('#su-confirm-msg')));
+  await page.fill('#su-confirm', PW); await page.fill('#su-q', 'Hi'); await page.click('#su-create');
+  check('too-short question refused', /at least 5/.test(await page.textContent('#su-q-msg')) && !(await page.evaluate(() => KeyPrint.hasAccount())));
+  await page.fill('#su-pass', ''); await page.fill('#su-confirm', '');
+  await setUp(page);
+  check('setup done: Enroll step with the password box', await page.isVisible('#pass') && !(await page.isVisible('#setup')) && /Password saved/.test(await page.textContent('#status')));
+  check('setup form cleared', await page.evaluate(() => ['su-pass', 'su-confirm', 'su-q', 'su-a'].every((id) => document.getElementById(id).value === '')));
+  check('keyboard mode', !(await page.isVisible('#keypad')) && (await page.evaluate(() => KeyPrint.device())) === 'desktop');
   await noOverflowAllTabs(page, '1440');
   await page.click('#pass');
-  for (const k of PASS) {
-    if (k === 'R') await page.keyboard.down('Shift');
-    await page.keyboard.down(k); await sleep(50); await page.keyboard.up(k); if (k === 'R') await page.keyboard.up('Shift'); await sleep(60);
-  }
+  await typeKeys(page, PASS);
   const xd = await page.evaluate(() => KeyPrint.lastVector());
-  check('keyboard attempt -> 31 features', xd && xd.length === 31, xd && xd.length);
+  check('keyboard attempt -> 31 features (10 characters + Return)', xd && xd.length === 31, xd && xd.length);
+  check('counted as sample 1', (await page.evaluate(() => KeyPrint.samples())) === 1);
+  await typeKeys(page, 'Tr0ub4dor?'.split('').concat('Enter'));
+  check('wrong password not counted', /not the password you created/.test(await page.textContent('#status')) && (await page.evaluate(() => KeyPrint.samples())) === 1);
   const tryParts = () => page.evaluate(() => [...document.querySelectorAll('#view-try .stage > *')].filter((el) => el.getBoundingClientRect().height && !el.classList.contains('sr-only')).map((el) => el.id || el.className).join(','));
-  check('Enroll shows steps, input, message, Reset, then the passphrase last', (await tryParts()) === 'steps,pass,status,reset-row,phrase');
-  check('passphrase shown at the bottom', (await page.textContent('#phrase')).includes('.tie5Roanl'));
+  check('Enroll shows steps + input, message, Reset', (await tryParts()) === 'capture,status,reset-row', await tryParts());
   check('no third step', !(await page.$('#step-friend')));
-  // a saved synthetic profile loads as trained
-  await page.evaluate(() => localStorage.setItem('keyprint.profile.v2', JSON.stringify({ app: 'KeyPrint', device: 'desktop', samples: KP.syntheticProfileSamples(7, 10), frr: 0.05 })));
+  // a saved synthetic 11-key profile for this account loads as trained
+  const loadSynthetic = (seed) => page.evaluate((seed) => {
+    const a = JSON.parse(localStorage.getItem('keyprint.account.v1'));
+    localStorage.setItem('keyprint.profile.v3', JSON.stringify({ app: 'KeyPrint', device: 'desktop', account: a.pwSalt, samples: KP.syntheticProfileSamples(seed, 10), frr: 0.05 }));
+  }, seed);
+  await loadSynthetic(7);
   await page.reload(); await sleep(150);
   check('desktop profile trained (synthetic example)', await page.evaluate(() => KeyPrint.trained() && KeyPrint.device() === 'desktop'));
   check('Verify step open once trained', await page.evaluate(() => !document.getElementById('step-verify').disabled));
-  check('Verify hides Reset, passphrase still last', (await tryParts()) === 'steps,pass,status,phrase' && !(await page.isVisible('#reset')));
+  check('Verify hides Reset', (await tryParts()) === 'capture,status' && !(await page.isVisible('#reset')), await tryParts());
   await page.screenshot({ path: path.join(SHOTS, 'desktop-1440.png') });
 
-  // Reset lives on the Enroll step: first click arms, second clears
+  // wrong password on Verify: rejected, no security question
+  await page.click('#pass'); await typeKeys(page, 'Tr0ub4dor?'.split('').concat('Enter'));
+  check('Verify, wrong password: rejected without the security question', /Rejected: that is not the password/.test(await page.textContent('#status')) && !(await page.isVisible('#recover-open')));
+  // right password, but this robot is not the synthetic typist: rejected on rhythm -> security question
+  await typeKeys(page, PASS);
+  check('Verify, right password, other rhythm: rejected on rhythm', /Rejected: right password/.test(await page.textContent('#status')), await page.textContent('#status'));
+  check('offers the security question', await page.isVisible('#recover-open'));
+  await page.click('#recover-open');
+  check('shows your own question', (await page.textContent('#recover-q')) === Q && await page.evaluate(() => document.activeElement.id === 'recover-a'));
+  await page.fill('#recover-a', 'red comet'); await page.click('#recover-check');
+  await page.waitForFunction(() => document.getElementById('recover-msg').textContent.length > 0);
+  check('wrong answer refused', /not right/.test(await page.textContent('#recover-msg')) && !(await page.isVisible('#retrain')));
+  await page.fill('#recover-a', '  blue   COMET '); await page.click('#recover-check');
+  await page.waitForSelector('#retrain', { state: 'visible' });
+  check('right answer (any case, extra spaces) lets you in and offers retraining', /Correct answer: you are in/.test(await page.textContent('#status')) && !(await page.isVisible('#recover')));
+  await page.screenshot({ path: path.join(SHOTS, 'desktop-1440-recover.png') });
+  await page.click('#retrain');
+  check('Retrain clears the rhythm but keeps the password', await page.evaluate(() => KeyPrint.samples() === 0 && !KeyPrint.trained() && KeyPrint.hasAccount() &&
+    document.getElementById('step-enroll').getAttribute('aria-current') === 'step') && !(await page.isVisible('#retrain')));
+
+  // Reset lives on the Enroll step: first click arms, second wipes everything and asks for a new password
+  await loadSynthetic(8); await page.reload(); await sleep(150);
   await page.click('#step-enroll'); await sleep(60);
   check('Enroll shows Reset', await page.isVisible('#reset'));
   await page.click('#reset');
   check('Reset asks for a second tap', /again/.test(await page.textContent('#reset')) && (await page.evaluate(() => KeyPrint.samples())) === 10);
   await page.click('#reset');
-  check('Reset clears the profile and returns to step 1', await page.evaluate(() => KeyPrint.samples() === 0 && !KeyPrint.trained() &&
-    document.getElementById('step-verify').disabled && document.getElementById('step-enroll-sub').textContent === '0/10' &&
-    JSON.parse(localStorage.getItem('keyprint.profile.v2')).samples.length === 0));
+  check('Reset wipes password, question and profile and returns to setup', await page.evaluate(() => KeyPrint.samples() === 0 && !KeyPrint.trained() && !KeyPrint.hasAccount() &&
+    localStorage.getItem('keyprint.account.v1') === null && localStorage.getItem('keyprint.profile.v3') === null) && await page.isVisible('#setup') && !(await page.isVisible('#pass')));
   check('Reset button label restored', (await page.textContent('#reset')).trim() === 'Reset');
+  await page.reload(); await sleep(150);
+  check('after reload, still asks for a new password', await page.isVisible('#setup'));
+  // old shared-passphrase data is cleared, never loaded
+  await page.evaluate(() => localStorage.setItem('keyprint.profile.v2', JSON.stringify({ app: 'KeyPrint', device: 'desktop', samples: KP.syntheticProfileSamples(7, 10) })));
+  await page.reload(); await sleep(150);
+  check('old .tie5Roanl profile removed, not used', await page.evaluate(() => localStorage.getItem('keyprint.profile.v2') === null && !KeyPrint.trained()) && await page.isVisible('#setup'));
 
   // How it works: plain walkthrough only, no Reset
   await page.click('#tab-how'); await sleep(120);
-  check('How it works is a 6-step walkthrough', (await page.$$('#view-how .walk > li')).length === 6);
+  check('How it works is a 7-step walkthrough', (await page.$$('#view-how .walk > li')).length === 7);
   check('old session panels are gone', await page.evaluate(() => ['timeline', 'rhythm', 'overall', 'verdicts', 'devs', 'tally', 'force-keypad', 'thr-table', 'test-out', 'export'].every((id) => !document.getElementById(id))));
   await page.screenshot({ path: path.join(SHOTS, 'desktop-1440-how.png'), fullPage: true });
   await page.click('#view-how a[data-goto="detectors"]'); await sleep(120);
   check('How it works links to the Detectors tab', await page.isVisible('#view-detectors') && (await page.getAttribute('#tab-detectors', 'aria-selected')) === 'true');
   await page.screenshot({ path: path.join(SHOTS, 'desktop-1440-detectors.png'), fullPage: true });
   await page.click('#tab-how'); await sleep(120);
-  await page.evaluate(() => localStorage.setItem('keyprint.profile.v2', JSON.stringify({ app: 'KeyPrint', device: 'desktop', samples: KP.syntheticProfileSamples(8, 10), frr: 0.05 })));
   await page.reload(); await sleep(150);
   check('reload remembers the How it works tab', await page.isVisible('#view-how .walk'));
   check('How it works has no Reset', await page.evaluate(() => !document.querySelector('#view-how button.danger') && !document.getElementById('how-reset')));

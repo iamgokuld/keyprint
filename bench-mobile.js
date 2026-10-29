@@ -10,7 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 const { load } = require('./test_util');
-const { KP, KPB, KPT } = load('KP-DETECTORS', 'KP-BENCH', 'KP-TOUCH');
+const { KP, KPB, KPT } = load('KP-DETECTORS', 'KP-BENCH', 'KP-TIMING', 'KP-TOUCH');
 
 const args = process.argv.slice(2);
 const opt = (name, def) => { const i = args.indexOf(name); return i >= 0 && args[i + 1] != null ? args[i + 1] : def; };
