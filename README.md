@@ -30,7 +30,7 @@ Passwords check what you typed. KeyPrint checks how long you held each key, how 
 - **Security question:** if the right password is rejected on rhythm, you can answer your question to get in, and then retrain on how you type now.
 - **Phone mode:** on a phone, an on-screen keyboard (letters, Shift, numbers and symbols) records where your thumb lands, not just when.
 - **Reset:** a Reset button on the Enroll step of Try it wipes your password, question and profile so you can start again with a new password. It is hidden during Verify.
-- **Benchmark:** the Benchmark tab runs on the CMU keystroke dataset and draws an ROC curve, an enrollment curve, and per-subject EER numbers.
+- **Detectors:** the Detectors tab explains the three detectors in plain language, each with a small worked example (real numbers from the real code), and shows how the 2-of-3 vote decides the verdict.
 - **Keep it simple:** the Try it tab is the password setup, then just two steps, the password box, the verdict and Reset (Enroll only). How it works is a plain seven-step walkthrough of what happens behind the scenes, written for someone with no background.
 
 ---

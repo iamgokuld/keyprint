@@ -2,7 +2,7 @@
 // Phone (375×667, touch, DPR 2): create a password, real touch input via CDP on the full on-screen keyboard (Shift, 123),
 // keypad attempt -> 31 + 22 features, multi-touch, Backspace, enroll + verify, canvas DPR + resize, touch targets, no overflow.
 // Desktop (1440×900): password rules and inline errors, keyboard attempt -> 31 features, wrong password not counted,
-// rhythm reject -> security question -> retrain, Reset on the Enroll step only, no shared passphrase anywhere, How it works.
+// rhythm reject -> security question -> retrain, Reset on the Enroll step only, no shared passphrase anywhere, How it works, Detectors tab.
 // Writes docs/screenshots/*.png.
 'use strict';
 const path = require('path');
@@ -40,7 +40,7 @@ async function overflow(page) {
   });
 }
 async function noOverflowAllTabs(page, label) {
-  for (const t of ['try', 'bench', 'how']) {
+  for (const t of ['try', 'detectors', 'how']) {
     await page.click('#tab-' + t); await sleep(120);
     const o = await overflow(page);
     check(label + ' · ' + t + ': no horizontal page scroll', o.sw <= o.cw && o.wide.length === 0, JSON.stringify(o));
@@ -178,14 +178,13 @@ async function typeKeys(page, keys) {
   check('account keeps only hashes of the password and answer', acct && acct.question === Q && !JSON.stringify(acct).includes(PW) && !/blue comet/i.test(JSON.stringify(acct)));
   check('desktop slot untouched', await page.evaluate(() => localStorage.getItem('keyprint.profile.v3') === null));
 
-  // canvases: DPR-scaled, follow resizes
-  await page.click('#tab-bench'); await sleep(200);
-  const cv = await page.evaluate(() => { const c = document.getElementById('c-roc'); return { w: c.width, cw: c.clientWidth, h: c.height, ch: c.clientHeight }; });
-  check('canvas backing store = CSS size × DPR 2', cv.w === Math.round(cv.cw * 2) && cv.h === Math.round(cv.ch * 2), JSON.stringify(cv));
-  await page.evaluate(() => window.scrollTo(0, 0)); await page.screenshot({ path: path.join(SHOTS, 'mobile-bench.png') });
+  // Detectors tab: three detectors, two plots, the vote table; no benchmark leftovers
+  await page.click('#tab-detectors'); await sleep(200);
+  check('Detectors tab shows 3 detectors', (await page.$$('#view-detectors .det-list > li')).length === 3);
+  check('Detectors tab has 2 plots and a 5-row vote table', (await page.$$('#view-detectors svg.plot')).length === 2 && (await page.$$('#det-votes tbody tr')).length === 5);
+  check('benchmark panel and tab are gone', await page.evaluate(() => !document.getElementById('view-bench') && !document.getElementById('tab-bench') && !document.querySelector('canvas')));
+  await page.evaluate(() => window.scrollTo(0, 0)); await page.screenshot({ path: path.join(SHOTS, 'mobile-detectors.png'), fullPage: true });
   await page.setViewportSize({ width: 667, height: 375 }); await sleep(300);
-  const cv2 = await page.evaluate(() => { const c = document.getElementById('c-roc'); return { w: c.width, cw: c.clientWidth }; });
-  check('ResizeObserver redraws on rotate (landscape)', cv2.cw > cv.cw && cv2.w === Math.round(cv2.cw * 2), JSON.stringify(cv2));
   await noOverflowAllTabs(page, '667 landscape');
   await page.setViewportSize({ width: 360, height: 640 }); await sleep(250);
   await noOverflowAllTabs(page, '360');
@@ -284,6 +283,10 @@ async function typeKeys(page, keys) {
   check('How it works is a 7-step walkthrough', (await page.$$('#view-how .walk > li')).length === 7);
   check('old session panels are gone', await page.evaluate(() => ['timeline', 'rhythm', 'overall', 'verdicts', 'devs', 'tally', 'force-keypad', 'thr-table', 'test-out', 'export'].every((id) => !document.getElementById(id))));
   await page.screenshot({ path: path.join(SHOTS, 'desktop-1440-how.png'), fullPage: true });
+  await page.click('#view-how a[data-goto="detectors"]'); await sleep(120);
+  check('How it works links to the Detectors tab', await page.isVisible('#view-detectors') && (await page.getAttribute('#tab-detectors', 'aria-selected')) === 'true');
+  await page.screenshot({ path: path.join(SHOTS, 'desktop-1440-detectors.png'), fullPage: true });
+  await page.click('#tab-how'); await sleep(120);
   await page.reload(); await sleep(150);
   check('reload remembers the How it works tab', await page.isVisible('#view-how .walk'));
   check('How it works has no Reset', await page.evaluate(() => !document.querySelector('#view-how button.danger') && !document.getElementById('how-reset')));
