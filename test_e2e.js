@@ -155,11 +155,6 @@ async function targets(page, scope) {
   check('no JS errors (phone)', errors.length === 0, errors.join(' | '));
   await ctx.close();
 
-  // phone, dark mode screenshot
-  ({ ctx, page, errors } = await open(browser, Object.assign({ colorScheme: 'dark' }, phone)));
-  await page.screenshot({ path: path.join(SHOTS, 'mobile-375-dark.png') });
-  await ctx.close();
-
   // ===================== desktop =====================
   console.log('Desktop 1440×900');
   ({ ctx, page, errors } = await open(browser, { viewport: { width: 1440, height: 900 } }));
@@ -175,16 +170,21 @@ async function targets(page, scope) {
   await page.evaluate(() => document.getElementById('load-example').click()); await sleep(100);
   check('desktop profile trained (synthetic example)', await page.evaluate(() => KeyPrint.trained() && KeyPrint.device() === 'desktop'));
   await page.screenshot({ path: path.join(SHOTS, 'desktop-1440.png') });
-  // force keypad: clearly labelled, separate profile, mouse taps give 53 features
+  // force keypad (switch lives on the How it works tab): clearly labelled, separate profile, mouse taps give 53 features
+  await page.click('#tab-how'); await sleep(120);
   await page.click('label.switch');
   check('forced keypad labelled as testing', await page.isVisible('#mode-note') && /forced/.test(await page.textContent('#mode-badge')));
   check('switching to keypad loads the (empty) phone profile', await page.evaluate(() => KeyPrint.device() === 'mobile' && KeyPrint.samples() === 0 && !KeyPrint.trained()));
+  await page.click('#tab-try'); await sleep(120);
+  check('Try tab shows only steps, input and message', await page.evaluate(() => [...document.querySelectorAll('#view-try .stage > *')].filter((el) => el.getBoundingClientRect().height && !el.classList.contains('sr-only')).map((el) => el.id || el.className).join(',') === 'steps,keypad,status'));
+  check('no third step', !(await page.$('#step-friend')));
   const bx = await keyBoxes(page, '#keypad');
   for (const k of PASS) { const b = bx[k]; await page.mouse.move(b.x + b.w / 2, b.y + b.h / 2); await page.mouse.down(); await sleep(50); await page.mouse.up(); await sleep(50); }
   check('mouse on forced keypad -> 53 features', (await page.evaluate(() => KeyPrint.lastVector().length)) === 53);
   await page.screenshot({ path: path.join(SHOTS, 'desktop-1440-keypad.png') });
   const imported = await page.evaluate(() => { document.getElementById('json-box').value = JSON.stringify({ app: 'KeyPrint', samples: [] }); document.getElementById('import-text').click(); return document.getElementById('pr-status').textContent; });
   check('a keyboard profile is refused while on the keypad', /keyboard\) profile|keyboard profile/.test(imported), imported);
+  await page.click('#tab-how'); await sleep(120);
   await page.click('label.switch');
   check('switching back restores the desktop profile', await page.evaluate(() => KeyPrint.device() === 'desktop' && KeyPrint.trained()));
   check('no JS errors (desktop)', errors.length === 0, errors.join(' | '));
