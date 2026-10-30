@@ -205,6 +205,7 @@ h2{font-size:12px;letter-spacing:.14em}
 .field-help{margin:0;font-size:14px;color:var(--muted)}
 .field-msg{margin:0;font-size:14px;color:var(--bad)}
 .field-msg:empty{display:none}
+.field-msg.ok{color:var(--ok)} .field-msg.ok::before{content:"✓ ";font-weight:700}
 .rules{list-style:none;margin:2px 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 14px;font-size:14px;color:var(--muted)}
 .rules li{position:relative;padding-left:22px}
 .rules li::before{content:"○";position:absolute;left:2px;top:0}
@@ -1315,11 +1316,14 @@ if (typeof module !== 'undefined') module.exports = KPT;
     return c;
   }
   $('su-pass').addEventListener('input', function () { paintRules(); paintConfirm(false); });
+  // live as you type: green "Passwords match" or red "Passwords do not match" once the confirm box has anything in it
   function paintConfirm(force) {
-    var p = $('su-pass').value, c = $('su-confirm').value, bad = c.length > 0 && (force || c.length >= p.length) && c !== p;
-    $('su-confirm-msg').textContent = bad ? 'The two passwords are not the same.' : '';
+    var p = $('su-pass').value, c = $('su-confirm').value, same = c === p, bad = (c.length > 0 || force) && !same;
+    var msg = $('su-confirm-msg');
+    msg.textContent = bad ? 'Passwords do not match.' : c.length > 0 ? 'Passwords match.' : '';
+    msg.classList.toggle('ok', !bad && c.length > 0);
     $('su-confirm').setAttribute('aria-invalid', bad ? 'true' : 'false');
-    return !bad && c === p;
+    return same;
   }
   $('su-confirm').addEventListener('input', function () { paintConfirm(false); });
   $('su-show').addEventListener('change', function () {
@@ -1339,7 +1343,7 @@ if (typeof module !== 'undefined') module.exports = KPT;
       $('su-create').disabled = false;
       account = acct;
       try { localStorage.setItem(ACCOUNT, JSON.stringify(acct)); } catch (err) { }
-      $('setup').reset(); $('su-pass').type = 'password'; $('su-confirm').type = 'password'; paintRules();
+      $('setup').reset(); $('su-pass').type = 'password'; $('su-confirm').type = 'password'; paintRules(); paintConfirm(false);
       state.samples = []; state.trained = null; state.lastX = null;
       setStep('enroll'); save(); render();
       setStatus('Password saved. Step 1: type it 10 times, each time ending with Return.', 'ok');
