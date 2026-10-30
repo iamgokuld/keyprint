@@ -244,6 +244,7 @@ h2{font-size:12px;letter-spacing:.14em}
 .det p{margin:0;text-wrap:pretty}
 .det-box{display:grid;gap:12px;padding:20px 22px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
 .det-list>li{gap:12px}
+.det-cast{margin:0;padding-left:20px;display:grid;gap:6px}
 .det-table{font-size:14px}
 .det-table th,.det-table td{padding:6px 8px}
 .det-table tbody th{text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink);font-weight:600}
@@ -351,8 +352,9 @@ h2{font-size:12px;letter-spacing:.14em}
     </div>
 
     <section class="det-box" aria-labelledby="det-ex-h">
-      <h3 id="det-ex-h">The example</h3>
-      <p>The real page measures about three timings for every key of your password, so an 8-character password plus Return gives 25 per try. To keep the sums small, this example uses only two: how long you hold <span class="mono">t</span>, and the gap from letting go of <span class="mono">t</span> to pressing <span class="mono">i</span>. Here are your 10 enrollment tries, in milliseconds:</p>
+      <h3 id="det-ex-h">The example: guarding the tiramisu</h3>
+      <p>There is one slice of tiramisu left in the shared fridge, and it is yours. You lock the fridge with KeyPrint and the password <span class="mono">tiramisu</span>. Your roommate saw you type it, so the password alone will not save the cake. Your typing rhythm has to.</p>
+      <p>The real page measures about three timings for every key, so <span class="mono">tiramisu</span> plus Return gives 25 per try. To keep the sums small, this example uses only two: how long you hold <span class="mono">t</span>, and the gap from letting go of <span class="mono">t</span> to pressing <span class="mono">i</span>. Here are your 10 enrollment tries, in milliseconds:</p>
       <div class="scroll">
         <table class="det-table" id="det-tries">
           <thead><tr><th scope="col">Try</th><th class="num" scope="col">1</th><th class="num" scope="col">2</th><th class="num" scope="col">3</th><th class="num" scope="col">4</th><th class="num" scope="col">5</th><th class="num" scope="col">6</th><th class="num" scope="col">7</th><th class="num" scope="col">8</th><th class="num" scope="col">9</th><th class="num" scope="col">10</th><th class="num" scope="col">Average</th></tr></thead>
@@ -363,6 +365,14 @@ h2{font-size:12px;letter-spacing:.14em}
         </table>
       </div>
       <p>Look at try 2 and try 3. On a slow try you hold <span class="mono">t</span> longer <em>and</em> wait longer before <span class="mono">i</span>. On a fast try, both are shorter. Keep that in mind for detector 2.</p>
+      <p>Then five people walk up to the fridge:</p>
+      <ul class="det-cast">
+        <li><strong>A</strong> (hold <span class="mono">110</span>, gap <span class="mono">220</span>): you at 7 a.m., before coffee. Slow, but your kind of slow.</li>
+        <li><strong>B</strong> (<span class="mono">110</span>, <span class="mono">180</span>): your roommate, who knows the password, holds <span class="mono">t</span> like you but then rushes to <span class="mono">i</span> because the cake is right there.</li>
+        <li><strong>C</strong> (<span class="mono">116</span>, <span class="mono">220</span>): you, typing one-handed with a spoon already in the other hand.</li>
+        <li><strong>D</strong> (<span class="mono">130</span>, <span class="mono">260</span>): your roommate’s uncle, typing with one finger and asking what a “tiramisu” is.</li>
+        <li><strong>E</strong> (<span class="mono">100</span>, <span class="mono">205</span>): you on a normal Tuesday.</li>
+      </ul>
     </section>
 
     <ol class="walk det-list">
@@ -371,16 +381,16 @@ h2{font-size:12px;letter-spacing:.14em}
         <p><strong>The idea.</strong> It measures how far each timing of a new try is from your <strong>average</strong>, counted in units of <strong>your usual wobble</strong>, and adds them up. A <strong>small total</strong> means the try looks like you.</p>
         <p>Your usual wobble is the average distance of your 10 tries from their average: <span class="mono">6 ms</span> for the hold and <span class="mono">9.2 ms</span> for the gap.</p>
         <div class="calc">
-          <p><strong>New try A:</strong> hold <span class="mono">110</span>, gap <span class="mono">220</span></p>
+          <p><strong>New try A</strong> (you before coffee): hold <span class="mono">110</span>, gap <span class="mono">220</span></p>
           <p class="mono">hold: (110 − 100) ÷ 6 = 1.67<br>gap:  (220 − 200) ÷ 9.2 = 2.17<br>total = <b>3.84</b></p>
           <p>The line for this detector is <span class="mono">4.73</span>. 3.84 is under it, so: <span class="chip ok">YES</span></p>
         </div>
         <div class="calc">
-          <p><strong>New try D:</strong> hold <span class="mono">130</span>, gap <span class="mono">260</span> (someone much slower)</p>
+          <p><strong>New try D:</strong> hold <span class="mono">130</span>, gap <span class="mono">260</span> (the one-finger uncle)</p>
           <p class="mono">hold: (130 − 100) ÷ 6 = 5.00<br>gap:  (260 − 200) ÷ 9.2 = 6.52<br>total = <b>11.52</b></p>
           <p>11.52 is over 4.73, so: <span class="chip bad">NO</span></p>
         </div>
-        <p><strong>Its blind spot.</strong> It looks at each timing on its own. Try B (hold <span class="mono">110</span>, gap <span class="mono">180</span>) also scores exactly 3.84 and gets a YES, even though nobody types like that in your tries.</p>
+        <p><strong>Its blind spot.</strong> It looks at each timing on its own. Try B (hold <span class="mono">110</span>, gap <span class="mono">180</span>) also scores exactly 3.84 and gets a YES. That is your roommate, and detector 1 just let them at the cake.</p>
       </li>
       <li>
         <h3>Mahalanobis: does the pattern fit?</h3>
@@ -393,8 +403,8 @@ h2{font-size:12px;letter-spacing:.14em}
           <figcaption>Dots are your 10 tries, + is the average. Inside the shaded zone the score is under the line (<span class="mono">2.03</span>).</figcaption>
         </figure>
         <div class="calc">
-          <p><strong>Try A</strong> (110, 220): slower on both, like your slow tries. Score <span class="mono"><b>1.83</b></span>, under 2.03: <span class="chip ok">YES</span></p>
-          <p><strong>Try B</strong> (110, 180): long hold but short gap, which you never do. Score <span class="mono"><b>6.36</b></span>, over 2.03: <span class="chip bad">NO</span></p>
+          <p><strong>Try A</strong> (110, 220): you before coffee, slower on both like your slow tries. Score <span class="mono"><b>1.83</b></span>, under 2.03: <span class="chip ok">YES</span></p>
+          <p><strong>Try B</strong> (110, 180): your roommate: long hold but short gap, which you never do. Score <span class="mono"><b>6.36</b></span>, over 2.03: <span class="chip bad">NO</span></p>
         </div>
         <p>Both tries are the same 3.84 wobbles away for detector 1. Only this detector sees that B breaks your pattern.</p>
       </li>
@@ -409,8 +419,9 @@ h2{font-size:12px;letter-spacing:.14em}
           <figcaption>Each try has a small bubble. Landing inside any bubble means a score under the line (<span class="mono">0.84</span>).</figcaption>
         </figure>
         <div class="calc">
-          <p><strong>New try C:</strong> hold <span class="mono">116</span>, gap <span class="mono">220</span>. Its nearest try is try 2 (112, 218), at a distance of <span class="mono"><b>0.81</b></span>. That is under 0.84: <span class="chip ok">YES</span></p>
+          <p><strong>New try C</strong> (you with a spoon): hold <span class="mono">116</span>, gap <span class="mono">220</span>. Its nearest try is try 2 (112, 218), at a distance of <span class="mono"><b>0.81</b></span>. That is under 0.84: <span class="chip ok">YES</span></p>
           <p>The same try is a little too far from the average for the other two (detector 1 gives 4.84 against 4.73, detector 2 gives 2.12 against 2.03), so they both say <span class="chip bad">NO</span>.</p>
+          <p>Sadly 1 vote is not enough (see the vote below), so you have to put the spoon down and type again.</p>
         </div>
       </li>
     </ol>
@@ -424,7 +435,7 @@ h2{font-size:12px;letter-spacing:.14em}
 
     <section class="det-box" aria-labelledby="det-vote-h">
       <h3 id="det-vote-h">The vote: 2 of 3 wins</h3>
-      <p>Each detector gives one vote. If at least <strong>2 of the 3</strong> say yes, the try is accepted. Here are the example tries:</p>
+      <p>Each detector gives one vote. If at least <strong>2 of the 3</strong> say yes, the try is accepted. So, who gets the tiramisu?</p>
       <div class="scroll">
         <table class="det-table" id="det-votes">
           <thead><tr><th scope="col">Try (hold, gap)</th><th scope="col">1 · Manhattan</th><th scope="col">2 · Mahalanobis</th><th scope="col">3 · Nearest</th><th scope="col">Result</th></tr></thead>
@@ -437,6 +448,7 @@ h2{font-size:12px;letter-spacing:.14em}
           </tbody>
         </table>
       </div>
+      <p>Only you before coffee (A) and you on a normal Tuesday (E) open the fridge. Your roommate and the uncle stay hungry, and you with the spoon (C) just have to put it down and type again.</p>
       <p>The Try it tab keeps it short: an accepted try just says <strong>It is you.</strong>, and a rejected one gets a cheeky line instead of the vote count.</p>
     </section>
 
