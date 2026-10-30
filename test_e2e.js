@@ -213,13 +213,25 @@ async function typeKeys(page, keys) {
   check('Create with a weak password: error, focus on the password, no account', /Fix the highlighted/.test(await page.textContent('#su-error')) &&
     (await page.evaluate(() => document.activeElement.id === 'su-pass' && !KeyPrint.hasAccount())));
   await page.fill('#su-pass', PW); await page.fill('#su-confirm', PW.slice(0, -1) + '?');
-  check('confirm mismatch shown inline', /not the same/.test(await page.textContent('#su-confirm-msg')));
-  await page.fill('#su-confirm', PW); await page.fill('#su-q', 'Hi'); await page.click('#su-create');
+  const confirmMsg = () => page.evaluate(() => { const m = document.getElementById('su-confirm-msg'); return m.textContent + '|' + (m.classList.contains('ok') ? 'ok' : 'bad') + '|' + document.getElementById('su-confirm').getAttribute('aria-invalid'); });
+  check('confirm mismatch shown inline', (await confirmMsg()) === 'Passwords do not match.|bad|true', await confirmMsg());
+  await page.fill('#su-confirm', '');
+  check('empty confirm: no match message', (await confirmMsg()) === '|bad|false', await confirmMsg());
+  await page.type('#su-confirm', PW.slice(0, 3));
+  check('confirm updates while typing: partial is a mismatch', (await confirmMsg()) === 'Passwords do not match.|bad|true', await confirmMsg());
+  await page.type('#su-confirm', PW.slice(3));
+  check('confirm updates while typing: full password matches', (await confirmMsg()) === 'Passwords match.|ok|false', await confirmMsg());
+  await page.fill('#su-pass', PW + 'x');
+  check('changing the password re-checks the confirm', (await confirmMsg()) === 'Passwords do not match.|bad|true', await confirmMsg());
+  await page.fill('#su-pass', PW);
+  check('back to the same password: match again', (await confirmMsg()) === 'Passwords match.|ok|false', await confirmMsg());
+  await page.fill('#su-q', 'Hi'); await page.click('#su-create');
   check('too-short question refused', /at least 5/.test(await page.textContent('#su-q-msg')) && !(await page.evaluate(() => KeyPrint.hasAccount())));
   await page.fill('#su-pass', ''); await page.fill('#su-confirm', '');
   await setUp(page);
   check('setup done: Enroll step with the password box', await page.isVisible('#pass') && !(await page.isVisible('#setup')) && /Password saved/.test(await page.textContent('#status')));
   check('setup form cleared', await page.evaluate(() => ['su-pass', 'su-confirm', 'su-q', 'su-a'].every((id) => document.getElementById(id).value === '')));
+  check('match message cleared after setup', (await page.textContent('#su-confirm-msg')) === '');
   check('keyboard mode', !(await page.isVisible('#keypad')) && (await page.evaluate(() => KeyPrint.device())) === 'desktop');
   await noOverflowAllTabs(page, '1440');
   await page.click('#pass');
