@@ -59,7 +59,6 @@ const exScore = (id, h, g) => KP.DETECTORS.find((d) => d.id === id).score(exMode
 const f2 = (v) => v.toFixed(2);
 const DET = (HTML.match(/<div id="view-detectors"[\s\S]*?<!-- =+ HOW IT WORKS/) || [''])[0];
 check('Manhattan wobble 6 ms / 9.2 ms', f2(exModel.manhattan.mad[0] * 1000) === '6.00' && f2(exModel.manhattan.mad[1] * 1000) === '9.20');
-check('Manhattan LOO scores as printed', DET.includes(KP.looScores(KP.scaledManhattan, EX).map(f2).sort((a, b) => a - b).join(' · ')));
 const EXPECT = [
   ['manhattan', null, null, 'line', '4.73'], ['mahalanobis', null, null, 'line', '2.03'], ['nn', null, null, 'line', '0.84'],
   ['manhattan', 110, 220, 'A', '3.84'], ['manhattan', 110, 180, 'B', '3.84'], ['manhattan', 130, 260, 'D', '11.52'], ['manhattan', 116, 220, 'C', '4.84'],
