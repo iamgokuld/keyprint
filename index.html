@@ -437,11 +437,10 @@ h2{font-size:12px;letter-spacing:.14em}
       </li>
     </ol>
 
-    <section class="det-box" aria-labelledby="det-line-h">
-      <h3 id="det-line-h">Where does “the line” come from?</h3>
-      <p>Each detector learns its own line from your 10 tries, so nobody has to pick a number by hand. It hides one try, scores it against the other 9, and repeats that for all 10. For detector 1 that gives these 10 scores:</p>
-      <p class="mono det-scores">0.00 · 0.45 · 1.16 · 1.41 · 2.04 · 2.06 · 3.27 · 3.34 · 4.49 · 4.93</p>
-      <p>The line goes where 95% of your own scores fall below it, which here is <span class="mono">4.73</span>. So roughly 1 in 20 of your real tries will still get a NO from each detector. That is why one NO is not enough to reject you.</p>
+    <section class="det-box" aria-labelledby="det-why-h">
+      <h3 id="det-why-h">Why this matters: your typing fingerprint</h3>
+      <p>Everyone has thumbs, but look closely and every thumb has its own <strong>fingerprint</strong>. Typing is the same: two people can both type a password in about <strong>3 seconds</strong> and look identical, but at the <strong>millisecond level</strong> each key is held and released differently.</p>
+      <p>In the story, your friend held <span class="mono">t</span> for a normal-for-you 110 ms, then jumped to <span class="mono">i</span> in <span class="mono">180 ms</span>, just <strong>20 ms faster</strong> than your average and faster than any of your 10 tries. 20 ms is <strong>much shorter than a blink</strong>, so nobody watching would notice, yet detector 2 caught it. The real page checks <strong>25 of these tiny timings</strong> for an 8-character password, so copying all of them is very hard.</p>
     </section>
 
     <section class="det-box" aria-labelledby="det-vote-h">
