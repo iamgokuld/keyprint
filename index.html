@@ -245,6 +245,7 @@ h2{font-size:12px;letter-spacing:.14em}
 .det-box{display:grid;gap:12px;padding:20px 22px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
 .det-list>li{gap:12px}
 .det-cast{margin:0;padding-left:20px;display:grid;gap:6px}
+.det-uses{margin:0;padding-left:22px;display:grid;gap:8px}
 .det-table{font-size:14px}
 .det-table th,.det-table td{padding:6px 8px}
 .det-table tbody th{text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink);font-weight:600}
@@ -453,8 +454,14 @@ h2{font-size:12px;letter-spacing:.14em}
     </section>
 
     <div class="how-notes">
-      <p><strong>The real thing is bigger, not different.</strong> On a keyboard the page uses every timing of your password: one hold per key, plus a press-to-press time and a gap between each pair of keys. An 8-character password plus Return gives 9 holds, 8 press-to-press times and 8 gaps, 25 in all. On a phone it adds two numbers per key for where your finger lands (18 more for that password, 43 in all). The three detectors and the 2-of-3 vote are exactly the same.</p>
-      <p><strong>Where they come from.</strong> All three are classic detectors from a 2009 study by Killourhy and Maxion at Carnegie Mellon, which compared many ways of telling typists apart. Detectors 2 and 3 also soften the “moves together” pattern a little, so 10 tries are not over-trusted.</p>
+      <h3>5 real-world ways this helps</h3>
+      <ol class="det-uses">
+        <li><strong>Leaked passwords.</strong> Huge password leaks happen all the time, and many people reuse the same password everywhere. Whoever buys your leaked password has the right letters but <strong>not your rhythm</strong>, so they get a NO.</li>
+        <li><strong>Brute-force and bot attacks.</strong> Hackers use scripts that fire thousands of password guesses. Even when a script hits the right password, it still has to match <strong>your hold and gap timings</strong>, which it has never seen, so it gets a NO. Pasting the password is blocked here too.</li>
+        <li><strong>Someone saw you type it.</strong> A roommate, a coworker or a shoulder-surfer in a café can learn your password by watching. Knowing the password is <strong>not enough</strong>; they also have to type it the way you do, like your roommate in the tiramisu story.</li>
+        <li><strong>A second check without an extra device.</strong> SMS codes and security keys need a phone or gadget you can lose. Your rhythm is <strong>always with you</strong> and checks you in the background while you type the password you already know.</li>
+        <li><strong>Proving the same person is still there.</strong> Some banks watch typing behavior to spot a stranger on a logged-in account, and online courses have used typing rhythm to check that the <strong>same student</strong> does the work.</li>
+      </ol>
     </div>
   </div>
 
