@@ -368,7 +368,7 @@ h2{font-size:12px;letter-spacing:.14em}
     <ol class="walk det-list">
       <li>
         <h3>Scaled Manhattan: how many wobbles away?</h3>
-        <p><strong>The idea.</strong> Your timings are never exactly the same twice. They wobble a little around your average. This detector takes each timing of the new try, sees how far it is from your average, and counts that distance in “your usual wobble”. Then it adds up the counts. A small total means the try looks like you.</p>
+        <p><strong>The idea.</strong> It measures how far each timing of a new try is from your <strong>average</strong>, counted in units of <strong>your usual wobble</strong>, and adds them up. A <strong>small total</strong> means the try looks like you.</p>
         <p>Your usual wobble is the average distance of your 10 tries from their average: <span class="mono">6 ms</span> for the hold and <span class="mono">9.2 ms</span> for the gap.</p>
         <div class="calc">
           <p><strong>New try A:</strong> hold <span class="mono">110</span>, gap <span class="mono">220</span></p>
@@ -384,7 +384,7 @@ h2{font-size:12px;letter-spacing:.14em}
       </li>
       <li>
         <h3>Mahalanobis: does the pattern fit?</h3>
-        <p><strong>The idea.</strong> This detector also measures distance from your average, but it knows which timings move together. In your tries a longer hold always comes with a longer gap. A try that follows that pattern counts as close. A try that breaks it counts as far, even when each timing alone looks normal.</p>
+        <p><strong>The idea.</strong> It also measures distance from your <strong>average</strong>, but it knows which timings <strong>move together</strong> (for you, a longer hold comes with a longer gap). A try that <strong>breaks that pattern</strong> counts as far, even when each timing alone looks normal.</p>
         <figure class="det-fig">
           <svg class="plot" viewBox="0 0 360 244" role="img" aria-labelledby="det-mah-t">
             <title id="det-mah-t">Your 10 tries form a slanted line of dots. The shaded zone around them is where Mahalanobis says yes. Try A sits inside the zone, try B sits well outside it.</title>
@@ -400,7 +400,7 @@ h2{font-size:12px;letter-spacing:.14em}
       </li>
       <li>
         <h3>Nearest neighbor: does it match one of your tries?</h3>
-        <p><strong>The idea.</strong> Instead of comparing with your average, this detector finds the single enrollment try that is closest to the new one, using the same pattern-aware distance as detector 2. If that closest try is near enough, it says yes. It helps when you sometimes type in a slightly different way, because one matching try is all it needs.</p>
+        <p><strong>The idea.</strong> Instead of your average, it finds the <strong>one enrollment try closest</strong> to the new try (using detector 2’s pattern-aware distance) and says yes if it is <strong>near enough</strong>. That helps when you <strong>sometimes type differently</strong>, because <strong>one matching try</strong> is all it needs.</p>
         <figure class="det-fig">
           <svg class="plot" viewBox="0 0 360 244" role="img" aria-labelledby="det-nn-t">
             <title id="det-nn-t">Each of your 10 tries has a small shaded bubble around it. Try C is far from the average but lands inside the bubble of try 2, its nearest try.</title>
